@@ -1,4 +1,4 @@
-{% set version = "0.4.23" %}
+{% set version = "0.4.25" %}
 {% set name = "jaxlib" %}
 
 package:
@@ -6,8 +6,8 @@ package:
   version: {{ version }}
 
 source:
-  url: https://github.com/google/jax/archive/{{ name }}-v{{ version }}.tar.gz
-  sha256: e4c06d62ba54becffd91abc862627b8b11b79c5a77366af8843b819665b6d568
+  url: https://github.com/jax-ml/jax/archive/refs/tags/{{ name }}-v{{ version }}.tar.gz
+  sha256: fc1197c401924942eb14185a61688d0c476e3e81ff71f9dc95e620b57c06eec8
 
 build:
   number: 1
@@ -19,8 +19,8 @@ requirements:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - python
-    # https://github.com/google/jax/blob/jaxlib-v0.4.23/build/build.py#L207
-    # https://github.com/google/jax/blob/jaxlib-v0.4.23/build/build.py#L98
+    # https://github.com/jax-ml/jax/blob/jaxlib-v0.4.25/build/build.py#L217
+    # https://github.com/jax-ml/jax/blob/jaxlib-v0.4.25/build/build.py#L108
     - bazel >=5.1.1,<7
     - bazel-toolchain >=0.1.9  # [not win]
   host:
@@ -28,9 +28,9 @@ requirements:
     - pip
     - wheel
     - setuptools
-    - numpy 1.22.*  # [py<311]
-    - numpy 1.23.*  # [py==311]
-    - numpy 1.26.*  # [py>=312]
+    - numpy >=1.22.* # [py<311]
+    - numpy >=1.23.2  # [py==311]
+    - numpy >=1.26.0  # [py>=312]
     - python-build
 
   run:
