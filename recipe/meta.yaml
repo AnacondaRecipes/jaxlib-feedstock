@@ -1,4 +1,4 @@
-{% set version = "0.4.23" %}
+{% set version = "0.4.30" %}
 {% set name = "jaxlib" %}
 
 package:
@@ -10,7 +10,7 @@ source:
   sha256: e4c06d62ba54becffd91abc862627b8b11b79c5a77366af8843b819665b6d568
 
 build:
-  number: 1
+  number: 0
   # s390x is missing bazel.
   skip: true  # [s390x or py<39]
 
