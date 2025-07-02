@@ -10,7 +10,7 @@ fi
 export CFLAGS="${CFLAGS} -DNDEBUG"
 export CXXFLAGS="${CXXFLAGS} -DNDEBUG"
 
-export BUILD_FLAGS="--target_cpu_features default --enable_mkl_dnn"
+export BUILD_FLAGS="--target_cpu_features default"
 
 #  - if JAX_RELEASE or JAXLIB_RELEASE are set: version looks like "0.4.16"
 #  - if JAX_NIGHTLY or JAXLIB_NIGHTLY are set: version looks like "0.4.16.dev20230906"
