@@ -14,6 +14,8 @@ package:
 source:
   url: https://github.com/google/jax/archive/jax-v{{ version }}.tar.gz
   sha256: af179a4047d473059beebc4b9d09763e80d8f7dcf4ae75670bc3dd912c92d6f5
+  patches:
+    - patches/add-system-absl-log-build.patch
 
 build:
   number: {{ build }}
