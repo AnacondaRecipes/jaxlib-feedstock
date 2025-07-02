@@ -130,3 +130,16 @@ bazel shutdown
 
 echo "Installing jaxlib wheel..."
 ${PYTHON} -m pip install dist/jaxlib-*.whl --no-build-isolation --no-deps
+
+# Workaround: Copy system.absl.log.BUILD into Bazel's external abseil-cpp absl/log directory if needed
+if [ -f "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" ]; then
+  echo "Looking for Bazel external absl/log directory to patch..."
+  for extdir in $(find bazel-* -type d -path '*/external/com_google_absl/absl/log' 2>/dev/null); do
+    if [ ! -f "$extdir/BUILD" ]; then
+      echo "Copying system.absl.log.BUILD to $extdir/BUILD"
+      cp "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" "$extdir/BUILD"
+    else
+      echo "BUILD file already exists in $extdir, skipping."
+    fi
+  done
+fi
