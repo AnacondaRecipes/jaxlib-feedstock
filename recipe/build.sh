@@ -115,6 +115,28 @@ export TF_SYSTEM_LIBS="
 
 bazel clean --expunge
 
+# Workaround: Copy system.absl.log.BUILD into Bazel's external abseil-cpp absl/log directory if needed
+if [ -f "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" ]; then
+  echo "Looking for Bazel external absl/log directory to patch..."
+  found_any=0
+  for extdir in $(find bazel-* -type d -path '*/external/com_google_absl/absl/log' 2>/dev/null); do
+    echo "Found candidate: $extdir"
+    found_any=1
+    if [ ! -f "$extdir/BUILD" ]; then
+      echo "Copying system.absl.log.BUILD to $extdir/BUILD"
+      cp "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" "$extdir/BUILD" || { echo "Failed to copy BUILD file!"; exit 1; }
+    else
+      echo "BUILD file already exists in $extdir, skipping."
+    fi
+  done
+  if [ $found_any -eq 0 ]; then
+    echo "No external absl/log directory found! Workaround did not run."
+    exit 1
+  fi
+fi
+
+# Main build
+
 echo "Building...."
 ${PYTHON} build/build.py build ${BUILD_FLAGS}
 echo "Building done."
@@ -130,16 +152,3 @@ bazel shutdown
 
 echo "Installing jaxlib wheel..."
 ${PYTHON} -m pip install dist/jaxlib-*.whl --no-build-isolation --no-deps
-
-# Workaround: Copy system.absl.log.BUILD into Bazel's external abseil-cpp absl/log directory if needed
-if [ -f "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" ]; then
-  echo "Looking for Bazel external absl/log directory to patch..."
-  for extdir in $(find bazel-* -type d -path '*/external/com_google_absl/absl/log' 2>/dev/null); do
-    if [ ! -f "$extdir/BUILD" ]; then
-      echo "Copying system.absl.log.BUILD to $extdir/BUILD"
-      cp "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" "$extdir/BUILD"
-    else
-      echo "BUILD file already exists in $extdir, skipping."
-    fi
-  done
-fi
