@@ -17,11 +17,11 @@ export BUILD_FLAGS="--target_cpu_features default --enable_mkl_dnn"
 #  - if none are set: version looks like "0.4.16.dev20230906+ge58560fdc
 export JAXLIB_RELEASE=1
 
-if [[ ${cuda_compiler_version} != "None" ]]; then
+if [[ ${cuda_compiler_version} != "None" && "${target_platform}" == linux-* ]]; then
   export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_60,sm_70,sm_75,sm_80,sm_86,sm_89,sm_90,compute_90
   export CUDA_HOME="${BUILD_PREFIX}/targets/x86_64-linux"
   export PATH=$PATH:${BUILD_PREFIX}/nvvm/bin
- 
+
   # XLA can only cope with a single cuda header include directory, merge both
   rsync -a ${PREFIX}/targets/x86_64-linux/include/ ${BUILD_PREFIX}/targets/x86_64-linux/include/
 
@@ -73,10 +73,10 @@ build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}"
 EOF
 
-# Unvendor from XLA using TF_SYSTEM_LIBS. You can find the list of supported libraries at:  
+# Unvendor from XLA using TF_SYSTEM_LIBS. You can find the list of supported libraries at:
 # https://github.com/openxla/xla/blob/main/third_party/tsl/third_party/systemlibs/syslibs_configure.bzl#L11
 # TODO: RE2 fails with: external/xla/xla/hlo/parser/hlo_lexer.cc:244:8: error: no matching function for call to 'Consume'
-  # if (!RE2::Consume(&consumable, *payload_pattern)) 
+  # if (!RE2::Consume(&consumable, *payload_pattern))
 # Removed com_googlesource_code_re2
 # Removed com_google_protobuf: Upstream discourages dynamically linking with protobuf https://github.com/conda-forge/jaxlib-feedstock/issues/89
 export TF_SYSTEM_LIBS="
@@ -116,7 +116,7 @@ export TF_SYSTEM_LIBS="
 bazel clean --expunge
 
 echo "Building...."
-${PYTHON} build/build.py ${BUILD_FLAGS}
+${PYTHON} build/build.py build ${BUILD_FLAGS}
 echo "Building done."
 
 # Clean up to speedup postprocessing
