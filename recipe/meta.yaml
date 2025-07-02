@@ -1,30 +1,31 @@
 {% set version = "0.6.1" %}
-{% set name = "jaxlib" %}
-
-{% set build = 2 %}
+{% set build = 0 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
 {% endif %}
+
 
 package:
   name: jaxlib
   version: {{ version }}
 
 source:
-  url: https://github.com/google/jax/archive/jax-v{{ version }}.tar.gz
+  # only pull sources after upstream PyPI release...
+  url: https://github.com/jax-ml/jax/archive/jax-v{{ version }}.tar.gz
   sha256: af179a4047d473059beebc4b9d09763e80d8f7dcf4ae75670bc3dd912c92d6f5
   patches:
-    - patches/add-system-absl-log-build.patch
-    - patches/0001-add-absl-log-build-to-abseil.patch
+    - patches/0001-Allow-for-custom-CUDA-build.patch
+    - patches/0002-Consolidated-build-fixes-for-XLA.patch
 
 build:
   number: {{ build }}
-  # s390x is missing bazel.
-  skip: true  # [s390x or py<310]
-  skip: true  # [skip_cuda_prefect and (gpu_variant or "").startswith('cuda')]
-  string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [(gpu_variant or "").startswith('cuda')]
-  string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [(gpu_variant or "").startswith('cpu')]
+  skip: true  # [win or py<310]
+  skip: true  # [cuda_compiler_version != "None" and aarch64]
+  # Currently the GPU kernels (and their abseil includes) are not compatible with GCC 11
+  skip: true  # [cuda_compiler_version == "11.8"]
+  string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
+  string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
 requirements:
   build:
