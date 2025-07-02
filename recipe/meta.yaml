@@ -7,7 +7,6 @@
 {% set build = build + 200 %}
 {% endif %}
 
-
 package:
   name: jaxlib
   version: {{ version }}
@@ -15,9 +14,6 @@ package:
 source:
   url: https://github.com/google/jax/archive/jax-v{{ version }}.tar.gz
   sha256: af179a4047d473059beebc4b9d09763e80d8f7dcf4ae75670bc3dd912c92d6f5
-  patches:
-      - patches/0000-Consolidated-build-fixes-for-XLA.patch  # [not win]
-      - patches/0001-Add-missing-typename.patch  # [not win]
 
 build:
   number: {{ build }}
@@ -40,7 +36,6 @@ requirements:
     - bazel >=6.5.0,<7
     - bazel-toolchain >=0.1.9  # [not win]
     - libabseil {{ libabseil }}
-    - patch  # [not win]
     - libgrpc {{ libgrpc }}
 
   host:
