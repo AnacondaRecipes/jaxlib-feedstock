@@ -76,7 +76,6 @@ EOF
 # Unvendor from XLA using TF_SYSTEM_LIBS. You can find the list of supported libraries at:
 # https://github.com/openxla/xla/blob/main/third_party/tsl/third_party/systemlibs/syslibs_configure.bzl#L11
 # TODO: RE2 fails with: external/xla/xla/hlo/parser/hlo_lexer.cc:244:8: error: no matching function for call to 'Consume'
-  # if (!RE2::Consume(&consumable, *payload_pattern))
 # Removed com_googlesource_code_re2
 # Removed com_google_protobuf: Upstream discourages dynamically linking with protobuf https://github.com/conda-forge/jaxlib-feedstock/issues/89
 export TF_SYSTEM_LIBS="
@@ -115,30 +114,10 @@ export TF_SYSTEM_LIBS="
 
 bazel clean --expunge
 
-# Workaround: Copy system.absl.log.BUILD into Bazel's external abseil-cpp absl/log directory if needed
-if [ -f "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" ]; then
-  echo "Looking for Bazel external absl/log directory to patch..."
-  found_any=0
-  for extdir in $(find bazel-* -type d -path '*/external/com_google_absl/absl/log' 2>/dev/null); do
-    echo "Found candidate: $extdir"
-    found_any=1
-    if [ ! -f "$extdir/BUILD" ]; then
-      echo "Copying system.absl.log.BUILD to $extdir/BUILD"
-      cp "$SRC_DIR/third_party/tsl/third_party/absl/system.absl.log.BUILD" "$extdir/BUILD" || { echo "Failed to copy BUILD file!"; exit 1; }
-    else
-      echo "BUILD file already exists in $extdir, skipping."
-    fi
-  done
-  if [ $found_any -eq 0 ]; then
-    echo "No external absl/log directory found! Workaround did not run."
-    exit 1
-  fi
-fi
-
 # Main build
 
 echo "Building...."
-${PYTHON} build/build.py build ${BUILD_FLAGS}
+${PYTHON} build/build.py build --bazel_startup_options="--output_base=$SRC_DIR/bazel_output" ${BUILD_FLAGS}
 echo "Building done."
 
 # Clean up to speedup postprocessing
