@@ -16,6 +16,7 @@ source:
   sha256: af179a4047d473059beebc4b9d09763e80d8f7dcf4ae75670bc3dd912c92d6f5
   patches:
     - patches/add-system-absl-log-build.patch
+    - patches/0001-add-absl-log-build-to-abseil.patch
 
 build:
   number: {{ build }}
