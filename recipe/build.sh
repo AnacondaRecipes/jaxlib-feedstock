@@ -104,7 +104,9 @@ build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
 build --features=-strict_header_checking
 build --features=-layering_check
+build --features=-parse_headers_verifies_modules
 build --experimental_strict_action_env=false
+build --nocheck_visibility
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
