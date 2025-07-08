@@ -75,6 +75,13 @@ fi
 # Note: --nouse_clang argument is no longer supported in JAX 0.6.1
 # Removed the conditional that was adding --nouse_clang for Linux platforms
 
+# JAX 0.6.1 requires clang to be available, even for GCC builds
+# Point clang_path to the GCC compiler as a workaround
+if [[ "${target_platform}" == linux-* ]]; then
+    # Use the conda-build provided CC compiler as clang_path
+    export BUILD_FLAGS="${BUILD_FLAGS} --clang_path=${CC}"
+fi
+
 source gen-bazel-toolchain
 
 cat >> .bazelrc <<EOF
