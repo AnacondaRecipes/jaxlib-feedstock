@@ -104,10 +104,10 @@ build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
 build --experimental_strict_action_env=false
 build --incompatible_strict_action_env=false
-build --copt=-resource-dir=./clang_headers
-build --host_copt=-resource-dir=./clang_headers
-build --cxxopt=-resource-dir=./clang_headers
-build --host_cxxopt=-resource-dir=./clang_headers
+build --copt=-I./clang_headers/include
+build --host_copt=-I./clang_headers/include
+build --cxxopt=-I./clang_headers/include
+build --host_cxxopt=-I./clang_headers/include
 build --copt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
 build --host_copt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
 build --cxxopt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
