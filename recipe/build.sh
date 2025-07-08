@@ -102,24 +102,11 @@ build --toolchain_resolution_debug
 build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
-build --features=-strict_header_checking
-build --features=-layering_check
-build --features=-parse_headers_verifies_modules
-build --features=-parse_headers
-build --features=-header_modules
-build --features=-use_header_modules
-build --features=-cc_include_scanning
 build --experimental_strict_action_env=false
-build --nocheck_visibility
-build --noexperimental_check_desugar_deps
 build --incompatible_strict_action_env=false
-build --sandbox_fake_hostname=false
-build --sandbox_fake_username=false
-build --experimental_sandbox_base=/tmp
-build --sandbox_add_mount_pair=${BUILD_PREFIX}/lib/clang/17/include
-build --action_env=CLANG_SYSTEM_INCLUDE_PATH=${BUILD_PREFIX}/lib/clang/17/include
-build --experimental_allow_unresolved_symlinks
-build --experimental_check_external_repository_files=false
+build --strategy=Genrule=standalone
+build --spawn_strategy=standalone
+build --genrule_strategy=standalone
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64

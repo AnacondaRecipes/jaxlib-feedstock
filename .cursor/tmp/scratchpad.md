@@ -5,49 +5,39 @@ Updating jaxlib conda feedstock from version 0.4.35 to 0.6.1. Working on Linux-6
 
 ## Build Attempt Progress
 
-### Build Attempt 13: FINAL DEFINITIVE FIX! 🎯
-**Status: 99.99% SUCCESS - All major issues completely resolved, applying definitive final fix**
+### Build Attempt 14: COMPLETE STRATEGY CHANGE! 🚀
+**Status: NEW APPROACH - Simplified configuration with standalone execution**
 
 #### ✅ **PERFECT JAX CLANG INTEGRATION (CONFIRMED):**
 - JAX clang detection: `--action_env=CLANG_COMPILER_PATH=.../clang-17 --config=clang` ✅
 - Bazel toolchain coordination: `BAZEL_TOOLCHAIN_GCC=.../clang` ✅
 - Build analysis: **"Analyzed target //jaxlib/tools:build_wheel (272 packages loaded, 20278 targets configured)"** ✅
-- Sandbox mounting: Working! Bazel can find clang headers ✅
 
-#### 🔧 **Final Issue: C++ Include Scanning Still Active (NOW DEFINITELY FIXED)**
-Despite all previous header flags, Bazel was still enforcing strict dependency checking on clang's builtin headers:
-```
-ERROR: undeclared inclusion(s) in rule '//jaxlib:cpu_feature_guard.so':
-  '/opt/conda/conda-bld/jaxlib_1752007195878/_build_env/lib/clang/17/include/inttypes.h'
-  '/opt/conda/conda-bld/jaxlib_1752007195878/_build_env/lib/clang/17/include/stdint.h'
-```
+#### 🔧 **RADICAL STRATEGY CHANGE: Simplify Everything**
+**Problem Analysis**: Despite adding numerous Bazel flags, we were still getting the same clang system headers dependency error. The flags weren't actually solving the core issue.
 
-**✅ DEFINITIVE FIX APPLIED:** Added `--features=-cc_include_scanning` to completely disable Bazel's C++ include scanning feature, which is the root cause of the dependency checking on clang system headers.
+**NEW APPROACH**: Complete simplification
+- **REMOVED**: All complex feature flags (`--features=-strict_header_checking`, `-layering_check`, `-cc_include_scanning`, etc.)
+- **REMOVED**: All complex sandboxing configurations (`--sandbox_add_mount_pair`, `--experimental_sandbox_base`, etc.)
+- **ADDED**: Simple standalone execution strategy:
+  ```bash
+  build --strategy=Genrule=standalone
+  build --spawn_strategy=standalone
+  build --genrule_strategy=standalone
+  ```
 
-**Final Configuration:**
-```bash
-build --features=-cc_include_scanning  # ← KEY FIX: Completely disables include scanning
-build --sandbox_add_mount_pair=${BUILD_PREFIX}/lib/clang/17/include  # ← Provides access
-build --action_env=CLANG_SYSTEM_INCLUDE_PATH=${BUILD_PREFIX}/lib/clang/17/include  # ← Environment
-```
+**Why This Should Work**:
+- `standalone` execution disables sandboxing entirely for all build actions
+- This allows Bazel to freely access clang system headers without restrictions
+- Much simpler than trying to configure complex sandbox mounting
+- Avoids the dependency checking that was causing the failures
 
-## 📈 Incredible Journey Summary - 99.99% Complete!
+#### 📈 **Expected Outcome**:
+With standalone execution, Bazel should be able to compile `cpu_feature_guard.c` successfully by accessing the clang system headers at `/opt/conda/conda-bld/.../lib/clang/17/include/` without any sandboxing restrictions.
 
-### ✅ **ALL MAJOR ARCHITECTURAL ISSUES PERFECTLY SOLVED:**
-1. **JAX clang detection**: Perfect! `--config=clang` working flawlessly
-2. **Bazel toolchain**: Using clang correctly throughout build system
-3. **Build analysis**: Complete success with 20,278 targets configured
-4. **Header access**: Sandbox mounting provides clang header access
-5. **Dependency checking**: Finally disabled with `--features=-cc_include_scanning`
+## Strategy Justification
+- **Previous approach**: Throwing complex flags at the problem
+- **New approach**: Radical simplification with proven standalone execution
+- **Confidence**: High - standalone execution is a well-known solution for Bazel sandbox issues
 
-### 🎯 **Expected Result:**
-This should be the **final successful build** that produces the JAX 0.6.1 wheel for conda!
-
-### 🔧 **Progressive Fixes Applied:**
-- Fixed clang detection and compiler environment variables
-- Added comprehensive Bazel configuration flags
-- Resolved sandbox path mounting issues
-- Disabled all forms of header dependency checking
-- **FINAL**: Completely disabled C++ include scanning
-
-**Status: Ready for final successful build attempt!** 🚀
+This represents a complete reset to a much simpler, more reliable approach.
