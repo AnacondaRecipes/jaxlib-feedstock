@@ -2,6 +2,9 @@
 
 set -euxo pipefail
 
+# Set up Python toolchain for bazel
+$RECIPE_DIR/add_py_toolchain.sh
+
 if [[ "${target_platform}" == osx-* ]]; then
   export LDFLAGS="${LDFLAGS} -lz -framework CoreFoundation -Xlinker -undefined -Xlinker dynamic_lookup"
 else
@@ -10,30 +13,37 @@ fi
 export CFLAGS="${CFLAGS} -DNDEBUG"
 export CXXFLAGS="${CXXFLAGS} -DNDEBUG"
 
-export BUILD_FLAGS="--target_cpu_features default --enable_mkl_dnn"
+export BUILD_FLAGS="--target_cpu_features=default"
+export WHEELS="jaxlib"
 
 #  - if JAX_RELEASE or JAXLIB_RELEASE are set: version looks like "0.4.16"
 #  - if JAX_NIGHTLY or JAXLIB_NIGHTLY are set: version looks like "0.4.16.dev20230906"
 #  - if none are set: version looks like "0.4.16.dev20230906+ge58560fdc
 export JAXLIB_RELEASE=1
 
-if [[ ${cuda_compiler_version} != "None" ]]; then
+if [[ ${cuda_compiler_version} != "None" ]] && [[ "${target_platform}" == linux-* ]]; then
   export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_60,sm_70,sm_75,sm_80,sm_86,sm_89,sm_90,compute_90
   export CUDA_HOME="${BUILD_PREFIX}/targets/x86_64-linux"
   export PATH=$PATH:${BUILD_PREFIX}/nvvm/bin
- 
+
   # XLA can only cope with a single cuda header include directory, merge both
-  rsync -a ${PREFIX}/targets/x86_64-linux/include/ ${BUILD_PREFIX}/targets/x86_64-linux/include/
+  if [[ -d "${PREFIX}/targets/x86_64-linux/include/" ]]; then
+    rsync -a ${PREFIX}/targets/x86_64-linux/include/ ${BUILD_PREFIX}/targets/x86_64-linux/include/
+  fi
 
   # Although XLA supports a non-hermetic build, it still tries to find headers in the hermetic locations.
   # We do this in the BUILD_PREFIX to not have any impact on the resulting jaxlib package.
   # Otherwise, these copied files would be included in the package.
-  rm -rf ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party
-  mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI
-  cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/
-  cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI/
-  mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn
-  cp ${PREFIX}/include/cudnn.h ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn/
+  if [[ -d "${PREFIX}/targets/x86_64-linux/include" ]]; then
+    rm -rf ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party
+    mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI
+    cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/
+    cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI/
+  fi
+  if [[ -f "${PREFIX}/include/cudnn.h" ]]; then
+    mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn
+    cp ${PREFIX}/include/cudnn.h ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn/
+  fi
 
   export LOCAL_CUDA_PATH="${BUILD_PREFIX}/targets/x86_64-linux"
   export LOCAL_CUDNN_PATH="${PREFIX}/targets/x86_64-linux"
@@ -44,13 +54,19 @@ if [[ ${cuda_compiler_version} != "None" ]]; then
   export TF_NCCL_VERSION=$(pkg-config nccl --modversion | grep -Po '\d+\.\d+')
 
   mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/bin
-  ln -s $(which ptxas) ${BUILD_PREFIX}/targets/x86_64-linux/bin/ptxas
-  ln -s $(which nvlink) ${BUILD_PREFIX}/targets/x86_64-linux/bin/nvlink
-  ln -s $(which fatbinary) ${BUILD_PREFIX}/targets/x86_64-linux/bin/fatbinary
+  if command -v ptxas &> /dev/null; then
+    ln -s $(which ptxas) ${BUILD_PREFIX}/targets/x86_64-linux/bin/ptxas
+  fi
+  if command -v nvlink &> /dev/null; then
+    ln -s $(which nvlink) ${BUILD_PREFIX}/targets/x86_64-linux/bin/nvlink
+  fi
+  if command -v fatbinary &> /dev/null; then
+    ln -s $(which fatbinary) ${BUILD_PREFIX}/targets/x86_64-linux/bin/fatbinary
+  fi
 
+  # For JAX 0.6.1+, CUDA is enabled via --wheels parameter
+  export WHEELS="jaxlib,jax-cuda-plugin"
   export BUILD_FLAGS="${BUILD_FLAGS} \
-                      --enable_cuda \
-                      --enable_nccl \
                       --cuda_compute_capabilities=$HERMETIC_CUDA_COMPUTE_CAPABILITIES \
                       --cuda_version=$TF_CUDA_VERSION \
                       --cudnn_version=$TF_CUDNN_VERSION"
@@ -65,18 +81,33 @@ source gen-bazel-toolchain
 cat >> .bazelrc <<EOF
 
 build --crosstool_top=//bazel_toolchain:toolchain
+build --platforms=//bazel_toolchain:target_platform
+build --host_platform=//bazel_toolchain:build_platform
+build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain
+build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain
 build --logging=6
 build --verbose_failures
 build --toolchain_resolution_debug
 build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
-build --local_cpu_resources=${CPU_COUNT}"
+build --local_cpu_resources=${CPU_COUNT}
 EOF
 
-# Unvendor from XLA using TF_SYSTEM_LIBS. You can find the list of supported libraries at:  
+# Never use the Apple toolchain - critical fix for macOS ARM64
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' '/local_config_apple/d' .bazelrc
+else
+  sed -i '/local_config_apple/d' .bazelrc
+fi
+
+if [[ "${target_platform}" == "osx-arm64" ]]; then
+  echo "build --cpu=darwin_arm64" >> .bazelrc
+fi
+
+# Unvendor from XLA using TF_SYSTEM_LIBS. You can find the list of supported libraries at:
 # https://github.com/openxla/xla/blob/main/third_party/tsl/third_party/systemlibs/syslibs_configure.bzl#L11
 # TODO: RE2 fails with: external/xla/xla/hlo/parser/hlo_lexer.cc:244:8: error: no matching function for call to 'Consume'
-  # if (!RE2::Consume(&consumable, *payload_pattern)) 
+  # if (!RE2::Consume(&consumable, *payload_pattern))
 # Removed com_googlesource_code_re2
 # Removed com_google_protobuf: Upstream discourages dynamically linking with protobuf https://github.com/conda-forge/jaxlib-feedstock/issues/89
 export TF_SYSTEM_LIBS="
@@ -116,7 +147,7 @@ export TF_SYSTEM_LIBS="
 bazel clean --expunge
 
 echo "Building...."
-${PYTHON} build/build.py ${BUILD_FLAGS}
+${PYTHON} build/build.py build --wheels=${WHEELS} ${BUILD_FLAGS}
 echo "Building done."
 
 # Clean up to speedup postprocessing
