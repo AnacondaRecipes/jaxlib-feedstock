@@ -102,7 +102,6 @@ build --toolchain_resolution_debug
 build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
-build --copt=-isystem${BUILD_PREFIX}/lib/clang/17/include
 build --features=-strict_header_checking
 EOF
 
