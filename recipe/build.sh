@@ -76,17 +76,17 @@ fi
 # Removed the conditional that was adding --nouse_clang for Linux platforms
 # JAX 0.6.1 requires clang to be available - now installed as build dependency
 
-# Override ALL compiler variables to use clang for bazel toolchain generation
-# This ensures the bazel toolchain uses clang instead of GCC to match JAX's --config=clang
-export CC="${BUILD_PREFIX}/bin/clang"
-export CXX="${BUILD_PREFIX}/bin/clang++"
-export CC_FOR_BUILD="${BUILD_PREFIX}/bin/clang"
-export CXX_FOR_BUILD="${BUILD_PREFIX}/bin/clang++"
+# RADICAL APPROACH: Switch back to GCC entirely instead of fighting clang header issues
+# Override ALL compiler variables to use GCC for bazel toolchain generation
+export CC="${BUILD_PREFIX}/bin/x86_64-conda-linux-gnu-gcc"
+export CXX="${BUILD_PREFIX}/bin/x86_64-conda-linux-gnu-g++"
+export CC_FOR_BUILD="${BUILD_PREFIX}/bin/x86_64-conda-linux-gnu-gcc"
+export CXX_FOR_BUILD="${BUILD_PREFIX}/bin/x86_64-conda-linux-gnu-g++"
 # Critical: Also override GCC/GXX variables that gen-bazel-toolchain uses
-export GCC="${BUILD_PREFIX}/bin/clang"
-export GXX="${BUILD_PREFIX}/bin/clang++"
+export GCC="${BUILD_PREFIX}/bin/x86_64-conda-linux-gnu-gcc"
+export GXX="${BUILD_PREFIX}/bin/x86_64-conda-linux-gnu-g++"
 
-# Regenerate bazel toolchain with clang settings
+# Regenerate bazel toolchain with GCC settings
 source gen-bazel-toolchain
 
 cat >> .bazelrc <<EOF
@@ -171,11 +171,19 @@ export TF_SYSTEM_LIBS="
 
 bazel clean --expunge
 
-# Try disabling Bazel's strict dependency checking instead of copying headers
-echo "Using simplified approach - disabling strict dependency checking..."
+# RADICAL APPROACH: Switch to GCC entirely to avoid clang header dependency issues
+echo "RADICAL APPROACH: Switching from clang to GCC to avoid header dependency issues..."
 
 echo "Building...."
+# Prevent JAX from auto-detecting clang by hiding clang from PATH temporarily
+export PATH_BACKUP="$PATH"
+export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v 'clang' | tr '\n' ':' | sed 's/:$//')
+# Unset any clang-related environment variables that JAX might detect
+unset CLANG_COMPILER_PATH 2>/dev/null || true
+unset BAZEL_COMPILER 2>/dev/null || true
 ${PYTHON} build/build.py build --wheels=${WHEELS} ${BUILD_FLAGS}
+# Restore PATH after build
+export PATH="$PATH_BACKUP"
 echo "Building done."
 
 # Clean up to speedup postprocessing
