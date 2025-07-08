@@ -17,7 +17,6 @@ source:
   sha256: 07ec7a19c3a27c4cca88288f9e9477a62cd0b54bd43c4a77f497505ddadc72ed
   patches:
       - patches/0000-Consolidated-build-fixes-for-XLA.patch  # [not win]
-      - patches/0001-Add-missing-typename.patch  # [not win]
 
 build:
   number: {{ build }}
