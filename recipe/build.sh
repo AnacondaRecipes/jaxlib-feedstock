@@ -108,8 +108,6 @@ build --features=-strict_header_checking
 build --features=-layering_check
 build --features=-parse_headers_verifies_modules
 build --features=-cc_include_scanning
-build --noimplicit_deps
-build --noexperimental_check_external_repository_files
 build --copt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
 build --host_copt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
 build --cxxopt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
