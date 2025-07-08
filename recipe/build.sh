@@ -82,6 +82,9 @@ export CC="${BUILD_PREFIX}/bin/clang"
 export CXX="${BUILD_PREFIX}/bin/clang++"
 export CC_FOR_BUILD="${BUILD_PREFIX}/bin/clang"
 export CXX_FOR_BUILD="${BUILD_PREFIX}/bin/clang++"
+# Critical: Also override GCC/GXX variables that gen-bazel-toolchain uses
+export GCC="${BUILD_PREFIX}/bin/clang"
+export GXX="${BUILD_PREFIX}/bin/clang++"
 
 # Regenerate bazel toolchain with clang settings
 source gen-bazel-toolchain
