@@ -29,9 +29,7 @@ build:
 
 requirements:
   build:
-    - {{ compiler('c') }}
-    - {{ compiler('cxx') }}
-    - {{ compiler('cuda') }}  # [(gpu_variant or "").startswith('cuda')]
+    # JAX 0.6.1 requires clang - use clang/clangxx directly instead of compiler macros
     - clang    # [win or linux]
     - clangxx  # [win or linux]
     - llvmdev  # [win]
