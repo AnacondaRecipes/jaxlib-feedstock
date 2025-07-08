@@ -119,9 +119,6 @@ build --sandbox_add_mount_pair=${BUILD_PREFIX}/lib/clang/17/include
 build --action_env=CLANG_SYSTEM_INCLUDE_PATH=${BUILD_PREFIX}/lib/clang/17/include
 build --experimental_allow_unresolved_symlinks
 build --experimental_check_external_repository_files=false
-build --nodiscarded_inputs_list
-build --nochecksum
-build --experimental_skyframe_native_filesets=false
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
