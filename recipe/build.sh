@@ -28,21 +28,21 @@ if [[ ${cuda_compiler_version} != "None" ]] && [[ "${target_platform}" == linux-
 
   # XLA can only cope with a single cuda header include directory, merge both
   if [[ -d "${PREFIX}/targets/x86_64-linux/include/" ]]; then
-    rsync -a ${PREFIX}/targets/x86_64-linux/include/ ${BUILD_PREFIX}/targets/x86_64-linux/include/
+  rsync -a ${PREFIX}/targets/x86_64-linux/include/ ${BUILD_PREFIX}/targets/x86_64-linux/include/
   fi
 
   # Although XLA supports a non-hermetic build, it still tries to find headers in the hermetic locations.
   # We do this in the BUILD_PREFIX to not have any impact on the resulting jaxlib package.
   # Otherwise, these copied files would be included in the package.
   if [[ -d "${PREFIX}/targets/x86_64-linux/include" ]]; then
-    rm -rf ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party
-    mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI
-    cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/
-    cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI/
+  rm -rf ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party
+  mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI
+  cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/
+  cp -r ${PREFIX}/targets/x86_64-linux/include ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cuda/extras/CUPTI/
   fi
   if [[ -f "${PREFIX}/include/cudnn.h" ]]; then
-    mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn
-    cp ${PREFIX}/include/cudnn.h ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn/
+  mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn
+  cp ${PREFIX}/include/cudnn.h ${BUILD_PREFIX}/targets/x86_64-linux/include/third_party/gpus/cudnn/
   fi
 
   export LOCAL_CUDA_PATH="${BUILD_PREFIX}/targets/x86_64-linux"
@@ -55,13 +55,13 @@ if [[ ${cuda_compiler_version} != "None" ]] && [[ "${target_platform}" == linux-
 
   mkdir -p ${BUILD_PREFIX}/targets/x86_64-linux/bin
   if command -v ptxas &> /dev/null; then
-    ln -s $(which ptxas) ${BUILD_PREFIX}/targets/x86_64-linux/bin/ptxas
+  ln -s $(which ptxas) ${BUILD_PREFIX}/targets/x86_64-linux/bin/ptxas
   fi
   if command -v nvlink &> /dev/null; then
-    ln -s $(which nvlink) ${BUILD_PREFIX}/targets/x86_64-linux/bin/nvlink
+  ln -s $(which nvlink) ${BUILD_PREFIX}/targets/x86_64-linux/bin/nvlink
   fi
   if command -v fatbinary &> /dev/null; then
-    ln -s $(which fatbinary) ${BUILD_PREFIX}/targets/x86_64-linux/bin/fatbinary
+  ln -s $(which fatbinary) ${BUILD_PREFIX}/targets/x86_64-linux/bin/fatbinary
   fi
 
   # For JAX 0.6.1+, CUDA is enabled via --wheels parameter
@@ -72,9 +72,8 @@ if [[ ${cuda_compiler_version} != "None" ]] && [[ "${target_platform}" == linux-
                       --cudnn_version=$TF_CUDNN_VERSION"
 fi
 
-if [[ "${target_platform}" == linux-* ]]; then
-    export BUILD_FLAGS="${BUILD_FLAGS} --nouse_clang"
-fi
+# Note: --nouse_clang argument is no longer supported in JAX 0.6.1
+# Removed the conditional that was adding --nouse_clang for Linux platforms
 
 source gen-bazel-toolchain
 

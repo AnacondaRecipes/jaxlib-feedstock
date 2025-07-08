@@ -10,7 +10,7 @@ cp $RECIPE_DIR/py_toolchain.bzl py_toolchain/BUILD
 if [[ "$OSTYPE" == "darwin"* ]]; then
   sed -i '' "s;@@SRC_DIR@@;$SRC_DIR;" py_toolchain/BUILD
 else
-  sed -i "s;@@SRC_DIR@@;$SRC_DIR;" py_toolchain/BUILD
+sed -i "s;@@SRC_DIR@@;$SRC_DIR;" py_toolchain/BUILD
 fi
 
 cat > python.shebang <<EOF
