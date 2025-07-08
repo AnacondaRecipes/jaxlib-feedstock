@@ -76,11 +76,14 @@ fi
 # Removed the conditional that was adding --nouse_clang for Linux platforms
 # JAX 0.6.1 requires clang to be available - now installed as build dependency
 
-# Override CC and CXX to use clang for bazel toolchain generation
+# Override ALL compiler variables to use clang for bazel toolchain generation
 # This ensures the bazel toolchain uses clang instead of GCC to match JAX's --config=clang
 export CC="${BUILD_PREFIX}/bin/clang"
 export CXX="${BUILD_PREFIX}/bin/clang++"
+export CC_FOR_BUILD="${BUILD_PREFIX}/bin/clang"
+export CXX_FOR_BUILD="${BUILD_PREFIX}/bin/clang++"
 
+# Regenerate bazel toolchain with clang settings
 source gen-bazel-toolchain
 
 cat >> .bazelrc <<EOF
