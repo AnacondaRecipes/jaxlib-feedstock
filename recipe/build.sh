@@ -104,14 +104,12 @@ build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
 build --experimental_strict_action_env=false
 build --incompatible_strict_action_env=false
-build --copt=-I./clang_headers/include
-build --host_copt=-I./clang_headers/include
-build --cxxopt=-I./clang_headers/include
-build --host_cxxopt=-I./clang_headers/include
-build --cxxopt=-I./cxx_headers/11.2.0
-build --host_cxxopt=-I./cxx_headers/11.2.0
-build --cxxopt=-I./cxx_headers/11.2.0/x86_64-conda-linux-gnu
-build --host_cxxopt=-I./cxx_headers/11.2.0/x86_64-conda-linux-gnu
+build --features=-strict_header_checking
+build --features=-layering_check
+build --features=-parse_headers_verifies_modules
+build --features=-cc_include_scanning
+build --noimplicit_deps
+build --noexperimental_check_external_repository_files
 build --copt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
 build --host_copt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
 build --cxxopt=-isystem${BUILD_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
@@ -175,17 +173,8 @@ export TF_SYSTEM_LIBS="
 
 bazel clean --expunge
 
-# Copy clang headers to local directory for Bazel access
-echo "Setting up clang headers for Bazel..."
-mkdir -p ./clang_headers
-cp -r ${BUILD_PREFIX}/lib/clang/17/include ./clang_headers/
-echo "Clang headers copied to $(pwd)/clang_headers/include"
-
-# Copy C++ stdlib headers to local directory for Bazel access
-echo "Setting up C++ stdlib headers for Bazel..."
-mkdir -p ./cxx_headers
-cp -r ${BUILD_PREFIX}/x86_64-conda-linux-gnu/include/c++/11.2.0 ./cxx_headers/
-echo "C++ stdlib headers copied to $(pwd)/cxx_headers/11.2.0"
+# Try disabling Bazel's strict dependency checking instead of copying headers
+echo "Using simplified approach - disabling strict dependency checking..."
 
 echo "Building...."
 ${PYTHON} build/build.py build --wheels=${WHEELS} ${BUILD_FLAGS}
