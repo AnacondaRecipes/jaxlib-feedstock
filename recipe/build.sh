@@ -117,8 +117,6 @@ build --sandbox_fake_username=false
 build --experimental_sandbox_base=/tmp
 build --sandbox_add_mount_pair=${BUILD_PREFIX}/lib/clang/17/include
 build --action_env=CLANG_SYSTEM_INCLUDE_PATH=${BUILD_PREFIX}/lib/clang/17/include
-build --copt=-isystem${BUILD_PREFIX}/lib/clang/17/include
-build --host_copt=-isystem${BUILD_PREFIX}/lib/clang/17/include
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
