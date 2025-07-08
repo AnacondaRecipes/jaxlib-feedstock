@@ -104,10 +104,18 @@ build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
 build --experimental_strict_action_env=false
 build --incompatible_strict_action_env=false
+build --copt=-nostdinc
+build --host_copt=-nostdinc
+build --cxxopt=-nostdinc
+build --host_cxxopt=-nostdinc
 build --copt=-isystem./clang_headers/include
 build --host_copt=-isystem./clang_headers/include
 build --cxxopt=-isystem./clang_headers/include
 build --host_cxxopt=-isystem./clang_headers/include
+build --copt=-isystem${PREFIX}/include
+build --host_copt=-isystem${PREFIX}/include
+build --cxxopt=-isystem${PREFIX}/include
+build --host_cxxopt=-isystem${PREFIX}/include
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
