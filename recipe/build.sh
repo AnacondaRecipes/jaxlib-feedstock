@@ -105,8 +105,14 @@ build --local_cpu_resources=${CPU_COUNT}
 build --features=-strict_header_checking
 build --features=-layering_check
 build --features=-parse_headers_verifies_modules
+build --features=-parse_headers
+build --features=-header_modules
+build --features=-use_header_modules
 build --experimental_strict_action_env=false
 build --nocheck_visibility
+build --noexperimental_check_desugar_deps
+build --copt=-Wno-#warnings
+build --host_copt=-Wno-#warnings
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
