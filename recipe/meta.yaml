@@ -1,7 +1,7 @@
-{% set version = "0.4.35" %}
+{% set version = "0.6.0" %}
 {% set name = "jaxlib" %}
 
-{% set build = 2 %}
+{% set build = 0 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -14,7 +14,7 @@ package:
 
 source:
   url: https://github.com/google/jax/archive/jax-v{{ version }}.tar.gz
-  sha256: 65e086708ae56670676b7b2340ad82b901d8c9993d1241a839c8990bdb8d6212
+  sha256: 07ec7a19c3a27c4cca88288f9e9477a62cd0b54bd43c4a77f497505ddadc72ed
   patches:
       - patches/0000-Consolidated-build-fixes-for-XLA.patch  # [not win]
       - patches/0001-Add-missing-typename.patch  # [not win]
