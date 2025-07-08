@@ -104,11 +104,10 @@ build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
 build --experimental_strict_action_env=false
 build --incompatible_strict_action_env=false
-build --copt=-isystem${BUILD_PREFIX}/lib/clang/17/include
-build --host_copt=-isystem${BUILD_PREFIX}/lib/clang/17/include
-build --cxxopt=-isystem${BUILD_PREFIX}/lib/clang/17/include
-build --host_cxxopt=-isystem${BUILD_PREFIX}/lib/clang/17/include
-build --sandbox_add_mount_pair=${BUILD_PREFIX}/lib/clang/17/include
+build --copt=-isystem./clang_headers/include
+build --host_copt=-isystem./clang_headers/include
+build --cxxopt=-isystem./clang_headers/include
+build --host_cxxopt=-isystem./clang_headers/include
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
@@ -163,6 +162,12 @@ export TF_SYSTEM_LIBS="
   zlib"
 
 bazel clean --expunge
+
+# Copy clang headers to local directory for Bazel access
+echo "Setting up clang headers for Bazel..."
+mkdir -p ./clang_headers
+cp -r ${BUILD_PREFIX}/lib/clang/17/include ./clang_headers/
+echo "Clang headers copied to $(pwd)/clang_headers/include"
 
 echo "Building...."
 ${PYTHON} build/build.py build --wheels=${WHEELS} ${BUILD_FLAGS}
