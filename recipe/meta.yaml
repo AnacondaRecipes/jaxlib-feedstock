@@ -29,7 +29,10 @@ build:
 
 requirements:
   build:
-    # JAX 0.6.1 requires clang - use clang/clangxx directly instead of compiler macros
+    # Need compiler macros for conda-build environment variables (LDFLAGS, CFLAGS, etc.)
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    # JAX 0.6.1 requires clang - will override GCC toolchain
     - clang    # [win or linux]
     - clangxx  # [win or linux]
     - llvmdev  # [win]
