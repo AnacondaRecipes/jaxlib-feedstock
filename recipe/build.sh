@@ -107,7 +107,6 @@ build --features=-layering_check
 build --features=-parse_headers_verifies_modules
 build --experimental_strict_action_env=false
 build --nocheck_visibility
-build --noenable_runfiles
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
