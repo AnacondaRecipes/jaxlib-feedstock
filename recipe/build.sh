@@ -108,6 +108,7 @@ build --features=-parse_headers_verifies_modules
 build --features=-parse_headers
 build --features=-header_modules
 build --features=-use_header_modules
+build --features=-cc_include_scanning
 build --experimental_strict_action_env=false
 build --nocheck_visibility
 build --noexperimental_check_desugar_deps
