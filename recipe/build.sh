@@ -104,9 +104,10 @@ build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --local_cpu_resources=${CPU_COUNT}
 build --experimental_strict_action_env=false
 build --incompatible_strict_action_env=false
-build --strategy=Genrule=standalone
-build --spawn_strategy=standalone
-build --genrule_strategy=standalone
+build --copt=-isystem${BUILD_PREFIX}/lib/clang/17/include
+build --host_copt=-isystem${BUILD_PREFIX}/lib/clang/17/include
+build --cxxopt=-isystem${BUILD_PREFIX}/lib/clang/17/include
+build --host_cxxopt=-isystem${BUILD_PREFIX}/lib/clang/17/include
 EOF
 
 # Never use the Apple toolchain - critical fix for macOS ARM64
