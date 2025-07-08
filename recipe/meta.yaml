@@ -32,6 +32,7 @@ requirements:
     - {{ compiler('cxx') }}
     - {{ compiler('cuda') }}  # [(gpu_variant or "").startswith('cuda')]
     - clang    # [win or linux]
+    - clangxx  # [win or linux]
     - llvmdev  # [win]
     - lld      # [win]
     - python
