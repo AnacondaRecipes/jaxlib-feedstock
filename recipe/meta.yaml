@@ -38,7 +38,7 @@ requirements:
     # https://github.com/jax-ml/jax/blob/jax-v0.4.35/build/build.py#L198
     - bazel >=6.5.0,<7
     - bazel-toolchain >=0.1.9  # [not win]
-    - libabseil {{ libabseil }}
+    - libabseil 20250127
     - patch  # [not win]
     - libgrpc {{ libgrpc }}
 
@@ -61,7 +61,7 @@ requirements:
     - setuptools
     - numpy 2
     - python-build
-    - libabseil {{ libabseil }}  # [not win]
+    - libabseil 20250127  # [not win]
     - openssl {{ openssl }}  # [not win]
     - nsync 1.24.0  # [not win]
     - snappy 1.2.1  # [not win]
