@@ -4,13 +4,15 @@ set -euxo pipefail
 
 if [[ "${target_platform}" == osx-* ]]; then
   export LDFLAGS="${LDFLAGS} -lz -framework CoreFoundation -Xlinker -undefined -Xlinker dynamic_lookup"
+  # Remove stdlib=libc++; this is the default and errors on C sources.
+  export CXXFLAGS=${CXXFLAGS/-stdlib=libc++}
 else
   export LDFLAGS="${LDFLAGS} -lrt"
 fi
 export CFLAGS="${CFLAGS} -DNDEBUG"
 export CXXFLAGS="${CXXFLAGS} -DNDEBUG"
 
-export BUILD_FLAGS="--target_cpu_features default"
+export BUILD_FLAGS="build --wheels=jaxlib --clang_path=${BUILD_PREFIX}/bin/clang++"
 
 #  - if JAX_RELEASE or JAXLIB_RELEASE are set: version looks like "0.4.16"
 #  - if JAX_NIGHTLY or JAXLIB_NIGHTLY are set: version looks like "0.4.16.dev20230906"
@@ -60,11 +62,13 @@ fi
 
 source gen-bazel-toolchain
 
+sed -i.bak -e '/^build:macos --apple_crosstool_top=@local_config_apple_cc\/\/:toolchain$/d' \
+           -e '/^build:macos --crosstool_top=@local_config_apple_cc\/\/:toolchain$/d' \
+           -e '/^build:macos --host_crosstool_top=@local_config_apple_cc\/\/:toolchain$/d' .bazelrc
+
 cat >> .bazelrc <<EOF
 
 build --crosstool_top=//bazel_toolchain:toolchain
-build --apple_crosstool_top=//bazel_toolchain:toolchain
-build --host_crosstool_top=//bazel_toolchain:toolchain
 build --logging=6
 build --verbose_failures
 build --toolchain_resolution_debug
@@ -116,33 +120,7 @@ export TF_SYSTEM_LIBS="
 bazel clean --expunge
 
 echo "Building...."
-
-# Fix clang naming for v0.6.0 build system
-# Create symlinks so build system can find clang with expected names
-if [[ ${CC} =~ clang ]]; then
-    # Extract clang major version (we know this is clang 14 from conda)
-    CLANG_VERSION="14"
-
-    # Create a separate directory for clang symlinks to avoid conflicts with Bazel toolchains
-    mkdir -p "${SRC_DIR}/clang-bin"
-
-    # Create symlinks in the separate directory (backup)
-    ln -sf "${CC}" "${SRC_DIR}/clang-bin/clang-${CLANG_VERSION}"
-    ln -sf "${CXX}" "${SRC_DIR}/clang-bin/clang++-${CLANG_VERSION}"
-
-    # Add our clang-bin directory to the front of PATH
-    export PATH="${SRC_DIR}/clang-bin:${PATH}"
-
-    # Also add clang++-14 to BUILD_PREFIX/bin since clang-14 is already there from conda
-    # This ensures both are in the same directory as expected by the build system
-    ln -sf "${CXX}" "${BUILD_PREFIX}/bin/clang++-${CLANG_VERSION}"
-
-    echo "Created clang symlinks: clang-${CLANG_VERSION} -> ${CC}, clang++-${CLANG_VERSION} -> ${CXX}"
-    echo "Added ${SRC_DIR}/clang-bin to PATH"
-    echo "Added clang++-${CLANG_VERSION} to ${BUILD_PREFIX}/bin"
-fi
-
-${PYTHON} build/build.py build --wheels=jaxlib ${BUILD_FLAGS}
+${PYTHON} build/build.py ${BUILD_FLAGS}
 echo "Building done."
 
 # Clean up to speedup postprocessing
