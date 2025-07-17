@@ -4,3 +4,6 @@ build_parameters:
   - "--skip-existing"
   - "--error-overlinking"
   - "--variants \"{skip_cuda_prefect: True}\""
+
+channels:
+  - https://staging.continuum.io/prefect/fs/bazel-feedstock/pr21/e687eb6
