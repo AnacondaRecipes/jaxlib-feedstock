@@ -57,7 +57,7 @@ if [[ ${cuda_compiler_version} != "None" ]]; then
 fi
 
 if [[ "${target_platform}" == linux-* ]]; then
-    export BUILD_FLAGS="${BUILD_FLAGS} --use_clang=false"
+    export BUILD_FLAGS="${BUILD_FLAGS} --use_clang=false --gcc_path $CC"
 fi
 
 source gen-bazel-toolchain

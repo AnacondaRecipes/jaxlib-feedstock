@@ -20,20 +20,17 @@ source:
 
 build:
   number: {{ build }}
-  # s390x is missing bazel.
-  skip: true  # [s390x or py<310]
   skip: true  # [skip_cuda_prefect and (gpu_variant or "").startswith('cuda')]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [(gpu_variant or "").startswith('cuda')]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [(gpu_variant or "").startswith('cpu')]
 
 requirements:
   build:
+    - {{ stdlib("c") }}
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - {{ compiler('cuda') }}  # [(gpu_variant or "").startswith('cuda')]
-    - clang    # [win]
-    - llvmdev  # [win]
-    - lld      # [win]
+    - clang_win-64  # [win]
     - python
     # https://github.com/pypa/setuptools/issues/3072
     # https://github.com/bazelbuild/bazel/issues/4327
