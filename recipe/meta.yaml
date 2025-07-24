@@ -21,6 +21,7 @@ source:
 build:
   number: {{ build }}
   skip: true  # [skip_cuda_prefect and (gpu_variant or "").startswith('cuda')]
+  skip: true  # [py<311]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [(gpu_variant or "").startswith('cuda')]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [(gpu_variant or "").startswith('cpu')]
 
