@@ -1,6 +1,2 @@
-# the conda build parameters to use
-build_parameters:
-  - "--suppress-variables"
-  - "--skip-existing"
-  - "--error-overlinking"
-  - "--variants \"{skip_cuda_prefect: True}\""
+channels:
+   - https://staging.continuum.io/pbp/fs/bazel-feedstock/pr23/189035b
