@@ -1,2 +1,4 @@
 channels:
-   - https://staging.continuum.io/pbp/fs/bazel-feedstock/pr0/aa2b3af
+  - https://staging.continuum.io/pbp/fs/bazel-feedstock/pr0/aa2b3af
+  - https://staging.continuum.io/pbp/fs/ctng-compilers-feedstock/pr2/f8b1f91
+  - https://staging.continuum.io/pbp/fs/ctng-compiler-activation-feedstock/pr0/051a431
