@@ -21,14 +21,15 @@ source:
 
 build:
   number: {{ build }}
-  skip: true  # [win or py<311]
+  # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
+  skip: true  # [py<311]
   skip: true  # [cuda_compiler_version != "None" and aarch64]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
 requirements:
   build:
-    - {{ stdlib("c") }}
+    - {{ stdlib('c') }}
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - {{ compiler('cuda') }}                 # [cuda_compiler_version != "None"]
@@ -37,9 +38,9 @@ requirements:
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - numpy                                  # [build_platform != target_platform]
     - zlib                                   # [build_platform != target_platform]
-    - unzip
+    - unzip                    # [unix]
     - bazel 7.*
-    - bazel-toolchain >=0.3.0
+    - bazel-toolchain >=0.3.0  # [unix]
     # need protoc
     - libprotobuf
     # needs protoc-gen-grpc
@@ -48,7 +49,7 @@ requirements:
     - flatbuffers <2.0.6
     # list libabseil here to ensure pinning correctly
     - libabseil
-    - sed
+    - sed                      # [unix]
   host:
     {% if cuda_compiler_version != "None" %}
     - cuda-cudart-dev
@@ -74,14 +75,15 @@ requirements:
     # list libabseil here to ensure pinning correctly
     - libabseil {{ libabseil }}
     - flatbuffers <2.0.6
-    - grpc-bazel-rules
-    - libgrpc
+    - grpc-bazel-rules {{ libgrpc }}
+    - libgrpc {{ libgrpc }}
     - openssl {{ openssl }}
     - zlib {{ zlib }}
   run:
     - python
-    - scipy >=1.9
-    - ml_dtypes >=0.2.0
+    - scipy >=1.12
+    - numpy >=1.26
+    - ml_dtypes >=0.5.0
     {% if cuda_compiler_version != "None" %}
     - __cuda
     - cuda-nvcc-tools
@@ -112,13 +114,20 @@ test:
     - test -f $SP_DIR/jaxlib-{{ version }}.dist-info/METADATA
 
 about:
-  home: http://github.com/jax-ml/jax
+  home: https://github.com/jax-ml/jax
   license: Apache-2.0
   license_file: LICENSE
+  license_family: APACHE
   summary: 'Composable transformations of Python+NumPy programs: differentiate, vectorize, JIT to GPU/TPU, and more'
-  dev_url: http://github.com/jax-ml/jax
+  description: |
+    JAX is a Python library for accelerator-oriented array computation and program transformation, designed for 
+    high-performance numerical computing and large-scale machine learning.
+  dev_url: https://github.com/jax-ml/jax
+  doc_url: https://github.com/jax-ml/jax/blob/main/README.md
 
 extra:
+  skip-lints:
+    - deprecated_python_install_command
   recipe-maintainers:
     - ehfd
     - ericmjl
