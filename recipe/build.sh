@@ -88,7 +88,7 @@ build --toolchain_resolution_debug
 build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 #build --local_resources=cpu=${CPU_COUNT}
-build --local_resources=cpu=4
+build --local_resources=cpu=8
 build --define=with_cross_compiler_support=true
 build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
 
