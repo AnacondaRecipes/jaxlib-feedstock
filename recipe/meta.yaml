@@ -1,7 +1,5 @@
 {% set version = "0.7.0" %}
 {% set build = 0 %}
-# Set CPU_COUNT variable
-{% set cpu_count = 2 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -30,8 +28,6 @@ build:
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
 requirements:
-  script_env:
-    - CPU_COUNT={{ cpu_count }}
   build:
     - {{ stdlib('c') }}
     - {{ compiler('c') }}
