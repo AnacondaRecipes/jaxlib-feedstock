@@ -82,8 +82,7 @@ echo build --verbose_failures >> .bazelrc
 echo build --toolchain_resolution_debug >> .bazelrc
 echo build --define=PREFIX=%PREFIX:\=/% >> .bazelrc
 echo build --define=PROTOBUF_INCLUDE_PATH=%PREFIX:\=/%/include >> .bazelrc
-::echo build --local_resources=cpu=%CPU_COUNT% >> .bazelrc
-echo build --local_resources=cpu=8 >> .bazelrc
+echo build --local_resources=cpu=%CPU_COUNT% >> .bazelrc
 echo build --repo_env=GRPC_BAZEL_DIR=%PREFIX:\=/%/share/bazel/grpc/bazel >> .bazelrc
 
 :: TODO: The upstream docs say CUDA on Windows is not officially supported but their build docs say otherwise. IDK
