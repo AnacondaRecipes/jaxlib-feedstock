@@ -88,13 +88,19 @@ build --toolchain_resolution_debug
 build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 #build --local_resources=cpu=${CPU_COUNT}
-build --local_resources=cpu=8
 build --define=with_cross_compiler_support=true
 build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
 
 # We need to define a dummy value for this as we delete everything else for build_cuda_with_nvcc
 build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1
 EOF
+
+# Use a fixed number instead of CPU_COUNT on linux-aarch64
+if [[ "${target_platform}" == "linux-aarch64" ]]; then
+  echo "build --local_resources=cpu=8" >> .bazelrc
+else
+  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc
+fi
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
   echo "build --cpu=${TARGET_CPU}" >> .bazelrc
