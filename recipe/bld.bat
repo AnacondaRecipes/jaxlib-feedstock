@@ -9,12 +9,23 @@ set BAZEL_VC="%VSINSTALLDIR%/VC"
 set CLANG_COMPILER_PATH=%BUILD_PREFIX:\=/%/Library/bin/clang.exe
 set BAZEL_LLVM=%BUILD_PREFIX:\=/%/Library/
 
+:: Set additional variables
+set "CC=%CLANG_COMPILER_PATH%"
+set "CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe"
+
 @REM   - if JAX_RELEASE or JAXLIB_RELEASE are set: version looks like "0.4.16"
 @REM   - if JAX_NIGHTLY or JAXLIB_NIGHTLY are set: version looks like "0.4.16.dev20230906"
 @REM   - if none are set: version looks like "0.4.16.dev20230906+ge58560fdc
 set JAXLIB_RELEASE=1
 
 @REM Note: TF_SYSTEM_LIBS don't work on windows per https://github.com/openxla/xla/blob/edf18ce242f234fbd20d1fbf4e9c96dfa5be2847/.bazelrc#L383
+
+:: Make sure Bazel uses clang
+echo build --action_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
+echo build --action_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
+echo build --repo_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
+echo build --repo_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
+echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc
 
 :: Needed for XLA to pull in dependencies.
 echo common --experimental_repo_remote_exec > .bazelrc
