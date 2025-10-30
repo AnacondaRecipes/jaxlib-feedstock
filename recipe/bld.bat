@@ -98,7 +98,6 @@ echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc
 
 :: Explicitly target x64 Windows only - skip ARM/AArch64
 echo build --cpu=x64_windows >> .bazelrc
-echo build --platforms=//jax/tools/toolchains:x64_windows >> .bazelrc
 echo build --build_tag_filters=-aarch64,-arm,-arm64 >> .bazelrc
 echo build --test_tag_filters=-aarch64,-arm,-arm64 >> .bazelrc
 
