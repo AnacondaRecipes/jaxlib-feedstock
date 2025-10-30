@@ -96,6 +96,12 @@ echo build --repo_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
 echo build --repo_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
 echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc
 
+:: Explicitly target x64 Windows only - skip ARM/AArch64
+echo build --cpu=x64_windows >> .bazelrc
+echo build --platforms=//jax/tools/toolchains:x64_windows >> .bazelrc
+echo build --build_tag_filters=-aarch64,-arm,-arm64 >> .bazelrc
+echo build --test_tag_filters=-aarch64,-arm,-arm64 >> .bazelrc
+
 :: Add "win_clang" config back
 echo common:win_clang --config=clang_local >> .bazelrc
 echo common:win_clang --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows-clang-cl  >> .bazelrc
