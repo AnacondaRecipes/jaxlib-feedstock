@@ -96,6 +96,12 @@ echo build --repo_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
 echo build --repo_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
 echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc
 
+:: Add "win_clang" config back
+echo common:win_clang --config=clang_local >> .bazelrc
+echo common:win_clang --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows-clang-cl  >> .bazelrc
+echo common:win_clang --extra_execution_platforms=//jax/tools/toolchains:x64_windows-clang-cl  >> .bazelrc
+echo common:win_clang --compiler=clang-cl >> .bazelrc
+
 :: TODO: The upstream docs say CUDA on Windows is not officially supported but their build docs say otherwise. IDK
 ::       which is right.
 %PYTHON% build/build.py build ^
