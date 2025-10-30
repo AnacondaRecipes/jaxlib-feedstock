@@ -20,13 +20,6 @@ set JAXLIB_RELEASE=1
 
 @REM Note: TF_SYSTEM_LIBS don't work on windows per https://github.com/openxla/xla/blob/edf18ce242f234fbd20d1fbf4e9c96dfa5be2847/.bazelrc#L383
 
-:: Make sure Bazel uses clang
-echo build --action_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
-echo build --action_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
-echo build --repo_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
-echo build --repo_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
-echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc
-
 :: Needed for XLA to pull in dependencies.
 echo common --experimental_repo_remote_exec > .bazelrc
 
@@ -95,6 +88,13 @@ echo build --define=PREFIX=%PREFIX:\=/% >> .bazelrc
 echo build --define=PROTOBUF_INCLUDE_PATH=%PREFIX:\=/%/include >> .bazelrc
 echo build --local_resources=cpu=%CPU_COUNT% >> .bazelrc
 echo build --repo_env=GRPC_BAZEL_DIR=%PREFIX:\=/%/share/bazel/grpc/bazel >> .bazelrc
+
+:: Make sure Bazel uses clang
+echo build --action_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
+echo build --action_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
+echo build --repo_env=CC=%CLANG_COMPILER_PATH% >> .bazelrc
+echo build --repo_env=CXX=%BUILD_PREFIX:\=/%/Library/bin/clang++.exe >> .bazelrc
+echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc
 
 :: TODO: The upstream docs say CUDA on Windows is not officially supported but their build docs say otherwise. IDK
 ::       which is right.
