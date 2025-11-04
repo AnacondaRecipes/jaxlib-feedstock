@@ -29,9 +29,9 @@ cxx_compiler:          # [win]
   - clang              # [win]
 c_compiler_version:
   - 14.3.0             # [linux]
-  - 17.0.6             # [win]
+  - 19.1.7             # [win]
   - 17.0.6             # [osx]
 cxx_compiler_version:
   - 14.3.0             # [linux]
-  - 17.0.6             # [win]
+  - 19.1.7             # [win]
   - 17.0.6             # [osx]
