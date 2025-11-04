@@ -22,7 +22,7 @@ source:
 build:
   number: {{ build }}
   # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
-  skip: true  # [py<311]
+  skip: true  # [py<310]
   skip: true  # [cuda_compiler_version != "None" and aarch64]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
