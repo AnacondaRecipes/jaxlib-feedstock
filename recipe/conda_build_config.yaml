@@ -2,7 +2,8 @@
 c_compiler:
   - clang
 cxx_compiler:
-  - clangxx
+  - clangxx  # [unix]
+  - clang  # [win]
 
 gpu_variant:
   - cpu
