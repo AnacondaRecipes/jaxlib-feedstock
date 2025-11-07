@@ -1,3 +1,9 @@
+# jaxlib wants clang on all platforms
+c_compiler:
+  - clang
+cxx_compiler:
+  - clangxx
+
 gpu_variant:
   - cpu
 # TODO: Skip CUDA builds for now since this package requires at least GCC 14 to build and we don't have CUDA built
@@ -21,17 +27,3 @@ zip_keys:                      # [(linux and x86_64)]
   -                            # [(linux and x86_64)]
     - gpu_variant              # [(linux and x86_64)]
     - cuda_compiler_version    # [(linux and x86_64)]
-
-# https://github.com/jax-ml/jax/blob/jax-v0.7.0/build/build.py#L291
-c_compiler:            # [win]
-  - clang              # [win]
-cxx_compiler:          # [win]
-  - clang              # [win]
-c_compiler_version:
-  - 14.3.0             # [linux]
-  - 19.1.7             # [win]
-  - 17.0.6             # [osx]
-cxx_compiler_version:
-  - 14.3.0             # [linux]
-  - 19.1.7             # [win]
-  - 17.0.6             # [osx]
