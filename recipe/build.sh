@@ -148,7 +148,7 @@ if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_pl
     EXTRA="${EXTRA} --target_cpu ${TARGET_CPU}"
 fi
 
-# Never use the Appe toolchain
+# Never use the Apple toolchain
 sed -i '/local_config_apple/d' .bazelrc
 if [[ "${target_platform}" == linux-* ]]; then
     EXTRA="${EXTRA} --clang_path $CC"
