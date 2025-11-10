@@ -1,3 +1,4 @@
+{% set name = 'jaxlib' %}
 {% set version = "0.7.2" %}
 {% set build = 0 %}
 
@@ -5,17 +6,17 @@
 {% set build = build + 200 %}
 {% endif %}
 
-
 package:
-  name: jaxlib
+  name: {{ name }}
   version: {{ version }}
 
 source:
-  # only pull sources after upstream PyPI release...
+  # Only pull sources after upstream PyPI release
   url: https://github.com/jax-ml/jax/archive/jax-v{{ version }}.tar.gz
   sha256: 56d92604f1bb60bb3dbd7dc7c7dc21502d10b3474b8b905ce29ce06db6a26e45
   patches:
     - patches/0001-Allow-for-custom-CUDA-build.patch
+    # Use vendored dependencies for packages depending on 'xla'
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
@@ -33,8 +34,8 @@ requirements:
     - {{ stdlib('c') }}
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
-    - {{ compiler('cuda') }}                 # [cuda_compiler_version != "None"]
-    - rsync                                  # [cuda_compiler_version != "None"]
+    - {{ compiler('cuda') }}   # [cuda_compiler_version != "None"]
+    - rsync                    # [cuda_compiler_version != "None"]
     - unzip                    # [unix]
     - bazel 7.*
     - bazel-toolchain >=0.3.0  # [unix]
