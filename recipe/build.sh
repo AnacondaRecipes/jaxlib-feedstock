@@ -163,6 +163,7 @@ fi
 
 ${PYTHON} build/build.py build \
     --target_cpu_features default \
+    --python_version $PY_VER \
     ${EXTRA}
 
 # Clean up to speedup postprocessing
