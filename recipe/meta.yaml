@@ -97,10 +97,10 @@ requirements:
     - jax >={{ version }}
 
 test:
-  files:
-    - test_jaxlib.py
   requires:
     - pip
+  files:
+    - test_jaxlib.py
   imports:
     - jaxlib
     # Only this import actually triggers the load of XLA
@@ -109,7 +109,8 @@ test:
     - pip check
     - python test_jaxlib.py
     # ensure that the package metadata did not mangle in the git hash, see #274
-    - test -f $SP_DIR/jaxlib-{{ version }}.dist-info/METADATA
+    - test -f $SP_DIR/jaxlib-{{ version }}.dist-info/METADATA  # [unix]
+    - if not exist "%SP_DIR%\jaxlib-{{ version }}.dist-info\METADATA" exit 1  # [win]
 
 about:
   home: https://github.com/jax-ml/jax
