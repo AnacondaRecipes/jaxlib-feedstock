@@ -15,6 +15,6 @@ ${PYTHON} "\$@"
 EOF
 chmod +x python.shebang
 
-cat >> .bazelrc <<EOF
+cat >> .bazelrc.user <<EOF
 build --extra_toolchains=//py_toolchain:py_toolchain
 EOF
