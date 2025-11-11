@@ -1,1 +1,2 @@
-# task_timeout: 14400
+# Set PBP timeout to 8 hrs
+task_timeout: 28800
