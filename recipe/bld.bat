@@ -9,6 +9,8 @@
 @echo on
 setlocal EnableDelayedExpansion
 
+set JAX_RELEASE=%PKG_VERSION%
+
 :: Necessary variables to make conda-build working
 set BAZEL_VS="%VSINSTALLDIR%"
 set BAZEL_VC="%VSINSTALLDIR%/VC"
@@ -20,6 +22,10 @@ set CLANG_CL_PATH=%BUILD_PREFIX:\=/%/Library/bin/clang-cl.exe
 
 :: Use ".bazelrc.user" file for customization
 :: Ref: https://github.com/jax-ml/jax/blob/main/.bazelrc#L526
+
+:: Set up Python toolchain to make sure we are using
+:: the Python executable from the conda-build environment
+call %RECIPE_DIR%\add_py_toolchain.bat
 
 :: Needed for XLA to pull in dependencies
 echo common --experimental_repo_remote_exec >> .bazelrc.user
