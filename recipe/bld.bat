@@ -77,3 +77,9 @@ bazel shutdown
 :: Install generated wheels
 %PYTHON% -m pip install --find-links=dist jaxlib --no-build-isolation --no-deps -vv
 if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
+
+:: Copy DLL files to the conda bin dir
+for /r "%PREFIX%\Lib\site-packages\jaxlib" %%i in (*.dll) do (
+    echo Copying %%~nxi
+    copy /Y "%%i" "%LIBRARY_BIN%\"
+)
