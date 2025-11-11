@@ -40,13 +40,13 @@ requirements:
     - bazel 7.*
     - bazel-toolchain >=0.3.0  # [unix]
     # need protoc
-    - libprotobuf
+    - libprotobuf              # [unix]
     # needs protoc-gen-grpc
-    - libgrpc
+    - libgrpc                  # [unix]
     # needs flatc
-    - flatbuffers <2.0.6
+    - flatbuffers <2.0.6       # [unix]
     # list libabseil here to ensure pinning correctly
-    - libabseil
+    - libabseil                # [unix]
     - sed                      # [unix]
   host:
     {% if cuda_compiler_version != "None" %}
@@ -71,12 +71,12 @@ requirements:
     - wheel
     - python-build
     # list libabseil here to ensure pinning correctly
-    - libabseil {{ libabseil }}
-    - flatbuffers <2.0.6
-    - grpc-bazel-rules {{ libgrpc }}
-    - libgrpc {{ libgrpc }}
-    - openssl {{ openssl }}
-    - zlib {{ zlib }}
+    - libabseil {{ libabseil }}       # [unix]
+    - flatbuffers <2.0.6              # [unix]
+    - grpc-bazel-rules {{ libgrpc }}  # [unix]
+    - libgrpc {{ libgrpc }}           # [unix]
+    - openssl {{ openssl }}           # [unix]
+    - zlib {{ zlib }}                 # [unix]
   run:
     - python
     - scipy >=1.12
