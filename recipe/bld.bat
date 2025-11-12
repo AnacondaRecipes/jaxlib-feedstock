@@ -67,7 +67,7 @@ echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc.userls
 :: * `0.7.2rc1` (release candidate): `--repo_env=ML_WHEEL_TYPE=release --repo_env=ML_WHEEL_VERSION_SUFFIX=rc1`
 :: * `0.7.2.dev20250128+3e75e20c7` (nightly build): `--repo_env=ML_WHEEL_TYPE=custom --repo_env=ML_WHEEL_BUILD_DATE=20250128 --repo_env=ML_WHEEL_GIT_HASH=$(git rev-parse HEAD)`
 :: Ref: https://github.com/jax-ml/jax/commit/d424f5b5b38b75b6577d2c30532abbb693353742
-echo build --repo_env=ML_WHEEL_TYPE=release >> .bazelrc.user
+echo build --repo_env=ML_WHEEL_TYPE=%ML_WHEEL_TYPE% >> .bazelrc.user
 echo build --repo_env=JAXLIB_RELEASE=%JAXLIB_RELEASE% >> .bazelrc.user
 
 :: _m_prefetchw is declared in both Clang and Windows SDK
