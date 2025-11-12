@@ -40,13 +40,13 @@ requirements:
     - bazel 7.*
     - bazel-toolchain >=0.3.0         # [unix]
     # need protoc
-    - libprotobuf {{ libprotobuf }}   # [unix]
+    - libprotobuf                     # [unix]
     # needs protoc-gen-grpc
-    - libgrpc {{ libgrpc }}           # [unix]
+    - libgrpc                         # [unix]
     # needs flatc
     - flatbuffers <2.0.6              # [unix]
     # list libabseil here to ensure pinning correctly
-    - libabseil {{ libabseil }}       # [unix]
+    - libabseil                       # [unix]
     - sed                             # [unix]
   host:
     {% if cuda_compiler_version != "None" %}
