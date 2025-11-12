@@ -59,7 +59,7 @@ echo build --action_env=CC=%CLANG_CL_PATH% >> .bazelrc.user
 echo build --action_env=CXX=%CLANG_CL_PATH% >> .bazelrc.user
 echo build --repo_env=CC=%CLANG_CL_PATH% >> .bazelrc.user
 echo build --repo_env=CXX=%CLANG_CL_PATH% >> .bazelrc.user
-echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc.userls
+echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc.user
 
 :: Set wheel version string (seems to be required alongside JAXLIB_RELEASE env variable)
 :: * `0.7.2.dev0+selfbuilt` (local build, default build rule behavior): `--repo_env=ML_WHEEL_TYPE=snapshot`
