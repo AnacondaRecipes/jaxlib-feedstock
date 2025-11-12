@@ -15,6 +15,13 @@ setlocal EnableDelayedExpansion
 :: where X is the build number, Y is the git hash
 :: This is required to get '%SP_DIR~\jaxlib-{{ version }}.dist-info' directory name correctly
 set JAXLIB_RELEASE=1
+
+:: Set wheel version string (seems to be required alongside JAXLIB_RELEASE env variable)
+:: * `0.7.2.dev0+selfbuilt` (local build, default build rule behavior): `--repo_env=ML_WHEEL_TYPE=snapshot`
+:: * `0.7.2` (release): `--repo_env=ML_WHEEL_TYPE=release`
+:: * `0.7.2rc1` (release candidate): `--repo_env=ML_WHEEL_TYPE=release --repo_env=ML_WHEEL_VERSION_SUFFIX=rc1`
+:: * `0.7.2.dev20250128+3e75e20c7` (nightly build): `--repo_env=ML_WHEEL_TYPE=custom --repo_env=ML_WHEEL_BUILD_DATE=20250128 --repo_env=ML_WHEEL_GIT_HASH=$(git rev-parse HEAD)`
+:: Ref: https://github.com/jax-ml/jax/commit/d424f5b5b38b75b6577d2c30532abbb693353742
 set ML_WHEEL_TYPE=release
 
 :: Necessary variables to make conda-build working
@@ -44,7 +51,7 @@ echo build --host_cxxopt=/Zc:__cplusplus >> .bazelrc.user
 
 :: TODO: Do we need to include 'winsock2.h'?
 
-:: Variables from build.sh
+:: Converted from build.sh
 echo build --logging=6 >> .bazelrc.user
 echo build --verbose_failures >> .bazelrc.user
 echo build --toolchain_resolution_debug >> .bazelrc.user
@@ -61,14 +68,9 @@ echo build --repo_env=CC=%CLANG_CL_PATH% >> .bazelrc.user
 echo build --repo_env=CXX=%CLANG_CL_PATH% >> .bazelrc.user
 echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc.user
 
-:: Set wheel version string (seems to be required alongside JAXLIB_RELEASE env variable)
-:: * `0.7.2.dev0+selfbuilt` (local build, default build rule behavior): `--repo_env=ML_WHEEL_TYPE=snapshot`
-:: * `0.7.2` (release): `--repo_env=ML_WHEEL_TYPE=release`
-:: * `0.7.2rc1` (release candidate): `--repo_env=ML_WHEEL_TYPE=release --repo_env=ML_WHEEL_VERSION_SUFFIX=rc1`
-:: * `0.7.2.dev20250128+3e75e20c7` (nightly build): `--repo_env=ML_WHEEL_TYPE=custom --repo_env=ML_WHEEL_BUILD_DATE=20250128 --repo_env=ML_WHEEL_GIT_HASH=$(git rev-parse HEAD)`
-:: Ref: https://github.com/jax-ml/jax/commit/d424f5b5b38b75b6577d2c30532abbb693353742
-echo build --repo_env=ML_WHEEL_TYPE=%ML_WHEEL_TYPE% >> .bazelrc.user
+:: Pass environment variables to the Bazel build environment
 echo build --repo_env=JAXLIB_RELEASE=%JAXLIB_RELEASE% >> .bazelrc.user
+echo build --repo_env=ML_WHEEL_TYPE=%ML_WHEEL_TYPE% >> .bazelrc.user
 
 :: _m_prefetchw is declared in both Clang and Windows SDK
 :: This can be removed with Clang 21
@@ -97,7 +99,7 @@ if not exist dist mkdir dist
 copy /Y bazel-bin\jaxlib\tools\dist\jaxlib-*.whl dist\
 if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
 
-:: Clean up
+:: Clean up Bazel artifacts
 bazel clean --expunge
 bazel shutdown
 
