@@ -116,10 +116,10 @@ test:
 
 about:
   home: https://github.com/jax-ml/jax
-  license: Apache-2.0
   license_file: LICENSE
-  license_family: APACHE
-  summary: 'Composable transformations of Python+NumPy programs: differentiate, vectorize, JIT to GPU/TPU, and more'
+  license: Apache-2.0
+  license_family: Apache
+  summary: Composable transformations of Python+NumPy programs - differentiate, vectorize, JIT to GPU/TPU, and more
   description: |
     JAX is a Python library for accelerator-oriented array computation and program transformation, designed for
     high-performance numerical computing and large-scale machine learning.
