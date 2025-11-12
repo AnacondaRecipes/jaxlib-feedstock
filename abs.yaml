@@ -1,2 +1,5 @@
 # Set PBP timeout to 8 hrs
 task_timeout: 28800
+
+channels:
+  - https://staging.continuum.io/pbp/protobuf-6.33.0-build-4

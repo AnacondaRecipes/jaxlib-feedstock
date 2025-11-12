@@ -34,20 +34,20 @@ requirements:
     - {{ stdlib('c') }}
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
-    - {{ compiler('cuda') }}   # [cuda_compiler_version != "None"]
-    - rsync                    # [cuda_compiler_version != "None"]
-    - unzip                    # [unix]
+    - {{ compiler('cuda') }}          # [cuda_compiler_version != "None"]
+    - rsync                           # [cuda_compiler_version != "None"]
+    - unzip                           # [unix]
     - bazel 7.*
-    - bazel-toolchain >=0.3.0  # [unix]
+    - bazel-toolchain >=0.3.0         # [unix]
     # need protoc
-    - libprotobuf              # [unix]
+    - libprotobuf {{ libprotobuf }}   # [unix]
     # needs protoc-gen-grpc
-    - libgrpc                  # [unix]
+    - libgrpc {{ libgrpc }}           # [unix]
     # needs flatc
-    - flatbuffers <2.0.6       # [unix]
+    - flatbuffers <2.0.6              # [unix]
     # list libabseil here to ensure pinning correctly
-    - libabseil                # [unix]
-    - sed                      # [unix]
+    - libabseil {{ libabseil }}       # [unix]
+    - sed                             # [unix]
   host:
     {% if cuda_compiler_version != "None" %}
     - cuda-cudart-dev
