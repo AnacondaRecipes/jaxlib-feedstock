@@ -4,6 +4,10 @@ c_compiler:
 cxx_compiler:
   - clangxx  # [unix]
   - clang  # [win]
+c_compiler_version:
+  - '20'
+cxx_compiler_version:
+  - '20'
 
 gpu_variant:
   - cpu
