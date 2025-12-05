@@ -16,10 +16,13 @@ source:
   sha256: 56d92604f1bb60bb3dbd7dc7c7dc21502d10b3474b8b905ce29ce06db6a26e45
   patches:
     - patches/0001-Allow-for-custom-CUDA-build.patch
-    # Use vendored dependencies for packages depending on 'xla'
+    # XLA unvendoring patches for Linux and macOS
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
+    # Additional XLA unvendoring patches (to be removed in jaxlib 0.8.x)
+    # 'absl_low_level_hash' is removed in abseil 20250814.1
+    - patches/0005-Support-for-abseil-20250814.1.patch  # [unix]
 
 build:
   number: {{ build }}
