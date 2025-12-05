@@ -1,2 +1,5 @@
 # Set PBP timeout to 8 hrs
 task_timeout: 28800
+
+channels:
+  - https://staging.continuum.io/preprod-pbp/fs/bazel-toolchain-feedstock/pr9/91668e7
