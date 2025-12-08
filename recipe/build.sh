@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euxo pipefail
 
-export JAX_RELEASE=$PKG_VERSION
+export JAX_RELEASE=1
 
 # Workaround a timestamp issue in rattler-build
 # https://github.com/prefix-dev/rattler-build/issues/1865
@@ -85,10 +85,6 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
                --build_cuda_with_clang"
 fi
 
-if [[ "${CI:-}" == "github_actions" ]]; then
-  export CPU_COUNT=2
-fi
-
 source gen-bazel-toolchain
 
 cat >> .bazelrc.user <<EOF
@@ -168,13 +164,11 @@ ${PYTHON} build/build.py build \
 
 # Clean up to speedup postprocessing
 pushd build
-bazel clean
+bazel clean --expunge
 popd
 
 pushd $SP_DIR
-# pip doesn't want to install cleanly in all cases, so we use the fact that we can unzip it.
-unzip $SRC_DIR/dist/jaxlib-*.whl
-#python -m pip install $SRC_DIR/dist/jaxlib-*.whl
+$PYTHON -m pip install $SRC_DIR/dist/jaxlib-*.whl --no-build-isolation --no-deps -vv
 
 # Add INSTALLER file and remove RECORD, workaround for
 # https://github.com/conda-forge/jaxlib-feedstock/issues/293
@@ -183,11 +177,8 @@ echo "conda" > "${JAXLIB_DIST_INFO_DIR}/INSTALLER"
 rm -f "${JAXLIB_DIST_INFO_DIR}/RECORD"
 
 if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
-  # pip doesn't want to install cleanly in all cases, so we use the fact that we can unzip it.
-  unzip $SRC_DIR/dist/jax_cuda*_plugin*.whl
-  unzip $SRC_DIR/dist/jax_cuda*_pjrt*.whl
-  #python -m pip install $SRC_DIR/dist/jax_cuda*_plugin*.whl
-  #python -m pip install $SRC_DIR/dist/jax_cuda*_pjrt*.whl
+  $PYTHON -m pip install $SRC_DIR/dist/jax_cuda*_plugin*.whl --no-build-isolation --no-deps -vv
+  $PYTHON -m pip install $SRC_DIR/dist/jax_cuda*_pjrt*.whl --no-build-isolation --no-deps -vv
 
   # Add INSTALLER file and remove RECORD, workaround for
   # https://github.com/conda-forge/jaxlib-feedstock/issues/293

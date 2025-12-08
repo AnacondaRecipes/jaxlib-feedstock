@@ -49,8 +49,6 @@ echo build --host_cxxopt=/std:c++17 >> .bazelrc.user
 echo build --cxxopt=/Zc:__cplusplus >> .bazelrc.user
 echo build --host_cxxopt=/Zc:__cplusplus >> .bazelrc.user
 
-:: TODO: Do we need to include 'winsock2.h'?
-
 :: Converted from build.sh
 echo build --logging=6 >> .bazelrc.user
 echo build --verbose_failures >> .bazelrc.user
@@ -80,8 +78,6 @@ echo build --copt=-D__PRFCHWINTRIN_H >> .bazelrc.user
 echo build --copt=-DNOMINMAX >> .bazelrc.user
 echo build --copt=-DWIN32_LEAN_AND_MEAN >> .bazelrc.user
 echo build --copt=-DNOGDI >> .bazelrc.user
-
-:: TODO: Do we need to add '--disable_mkl_dnn' to the build parameters?
 
 :: Build and install jaxlib
 %PYTHON% build/build.py build ^
