@@ -133,6 +133,37 @@ export TF_SYSTEM_LIBS="
   zlib
 "
 
+# Anaconda XLA unvendoring
+export TF_SYSTEM_LIBS="
+  ${TF_SYSTEM_LIBS},
+  absl_py,
+  astor_archive,
+  astunparse_archive,
+  curl,
+  cython,
+  dill_archive,
+  double_conversion,
+  functools32_archive,
+  gast_archive,
+  gif,
+  hwloc,
+  icu,
+  jsoncpp_git,
+  libjpeg_turbo,
+  nasm,
+  nsync,
+  org_sqlite,
+  pasta,
+  png,
+  pybind11,
+  six_archive,
+  snappy,
+  tblib_archive,
+  termcolor_archive,
+  typing_extensions_archive,
+  wrapt
+"
+
 if [[ "${target_platform}" == "osx-64" ]]; then
     export TF_SYSTEM_LIBS="${TF_SYSTEM_LIBS},onednn"
 fi
