@@ -82,6 +82,13 @@ requirements:
     - libgrpc {{ libgrpc }}           # [unix]
     - openssl {{ openssl }}           # [unix]
     - zlib {{ zlib }}                 # [unix]
+    # dependencies for Anaconda XLA unvendoring
+    - nsync 1.24.0                    # [unix]
+    - snappy 1.2.1                    # [unix]
+    - double-conversion 3.1.5         # [unix]
+    - jsoncpp {{ jsoncpp }}           # [unix]
+    - pybind11 2.13.6                 # [unix]
+    - libcurl {{ libcurl }}           # [unix]
   run:
     # https://github.com/jax-ml/jax/blob/jax-v0.7.2/setup.py#L63
     - python
