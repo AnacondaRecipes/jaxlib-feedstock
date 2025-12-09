@@ -30,7 +30,7 @@ build:
   skip: true  # [py<311]
   skip: true  # [cuda_compiler_version != "None" and aarch64]
   # TODO: re-enable after symlinks on PBP work again. See SIR-2371
-  skip: true  # [win]
+  #skip: true  # [win]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
