@@ -43,7 +43,7 @@ requirements:
     - rsync                           # [cuda_compiler_version != "None"]
     - unzip                           # [unix]
     - bazel 7.*
-    - bazel-toolchain >=0.4.0         # [unix]
+    - bazel-toolchain >=0.4.1         # [unix]
     # need protoc
     - libprotobuf                     # [unix]
     # needs protoc-gen-grpc
