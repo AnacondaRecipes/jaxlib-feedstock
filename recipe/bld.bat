@@ -1,7 +1,4 @@
-:: https://docs.jax.dev/en/latest/developer.html#building-jaxlib-from-source
-:: https://docs.jax.dev/en/latest/developer.html#additional-notes-for-building-jaxlib-from-source-on-windows
-
-:: Note: TF_SYSTEM_LIBS variable doesn't work on Windows
+:: Note: TF_SYSTEM_LIBS variable won't work on Windows
 :: Ref: https://github.com/tensorflow/tensorflow/blob/master/.bazelrc#L476
 :: Therefore, for any of the packages that rely on xla (tensorflow and jaxlib),
 :: we've made the decision to just use the vendored dependencies on Windows.
@@ -28,26 +25,7 @@ set ML_WHEEL_TYPE=release
 set BAZEL_VS="%VSINSTALLDIR%"
 set BAZEL_VC="%VSINSTALLDIR%/VC"
 set BAZEL_LLVM=%BUILD_PREFIX:\=/%/Library/
-
-:: Variables for passing to the Bazel build environment
 set CLANG_COMPILER_PATH=%BUILD_PREFIX:\=/%/Library/bin/clang.exe
-set CLANG_CL_PATH=%BUILD_PREFIX:\=/%/Library/bin/clang-cl.exe
-
-:: Use ".bazelrc.user" file for customization
-:: Ref: https://github.com/jax-ml/jax/blob/main/.bazelrc#L526
-
-:: Set up Python toolchain to make sure we are using
-:: the Python executable from the conda-build environment
-call %RECIPE_DIR%\add_py_toolchain.bat
-
-:: Needed for XLA to pull in dependencies
-echo common --experimental_repo_remote_exec >> .bazelrc.user
-
-:: Set min C++ standard in a format MSVC understands.
-echo build --cxxopt=/std:c++17 >> .bazelrc.user
-echo build --host_cxxopt=/std:c++17 >> .bazelrc.user
-echo build --cxxopt=/Zc:__cplusplus >> .bazelrc.user
-echo build --host_cxxopt=/Zc:__cplusplus >> .bazelrc.user
 
 :: Converted from build.sh
 echo build --logging=6 >> .bazelrc.user
@@ -58,39 +36,37 @@ echo build --define=PROTOBUF_INCLUDE_PATH=%PREFIX:\=/%/include >> .bazelrc.user
 echo build --local_resources=cpu=%CPU_COUNT% >> .bazelrc.user
 echo build --repo_env=GRPC_BAZEL_DIR=%PREFIX:\=/%/share/bazel/grpc/bazel >> .bazelrc.user
 
-:: Make sure Bazel uses clang
-:: "win_clang" config should be able to take care of this, but sometimes it fails
-echo build --action_env=CC=%CLANG_CL_PATH% >> .bazelrc.user
-echo build --action_env=CXX=%CLANG_CL_PATH% >> .bazelrc.user
-echo build --repo_env=CC=%CLANG_CL_PATH% >> .bazelrc.user
-echo build --repo_env=CXX=%CLANG_CL_PATH% >> .bazelrc.user
-echo build --repo_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1 >> .bazelrc.user
-
-:: Pass environment variables to the Bazel build environment
-echo build --repo_env=JAXLIB_RELEASE=%JAXLIB_RELEASE% >> .bazelrc.user
-echo build --repo_env=ML_WHEEL_TYPE=%ML_WHEEL_TYPE% >> .bazelrc.user
-
 :: _m_prefetchw is declared in both Clang and Windows SDK
-:: This can be removed with Clang 21
+:: This can be removed after Clang 21 is released
 echo build --copt=-D__PRFCHWINTRIN_H >> .bazelrc.user
 
-:: Prevent leaking Windows macros that conflict with stdlib
-echo build --copt=-DNOMINMAX >> .bazelrc.user
-echo build --copt=-DWIN32_LEAN_AND_MEAN >> .bazelrc.user
-echo build --copt=-DNOGDI >> .bazelrc.user
-
 :: Build and install jaxlib
+:: --wheels=jaxlib
+::      to explicitly build jaxlib wheels only
+:: --use_clang=true
+::to use the clang as recommended by the upstream
+:: --clang_path=%CLANG_COMPILER_PATH%
+::      to use the clang from the conda-build environment
+:: --python_version=%PY_VER% is
+::      not directly required and 99.99% of the time hermetic builds use the conda-build environment python version,
+::      but we just want to make sure it is always the same as conda-build environment python version.
+::      Therefore, this is here for just a bit of extra caution.
+:: --bazel_options=--config=win_clang
+::      to use the win_clang config defined in JAX .bazelrc file
+::      'win_clang' config allows the build system to use 'clang-cl.exe' instead of 'cl.exe'.
+:: --bazel_options="--experimental_ui_max_stdouterr_bytes=8000000"
+::      to increase the size of the buffer for stderr output
+::      If this number is too small, the errors will be truncated.
 %PYTHON% build/build.py build ^
-  --verbose ^
-  --wheels=jaxlib ^
-  --use_clang=true ^
-  --clang_path=%CLANG_COMPILER_PATH% ^
-  --python_version=%PY_VER% ^
-  --bazel_options="--config=win_clang" ^
-  --bazel_options="--experimental_ui_max_stdouterr_bytes=8000000"
+    --verbose ^
+    --wheels=jaxlib ^
+    --use_clang=true ^
+    --clang_path=%CLANG_COMPILER_PATH% ^
+    --python_version=%PY_VER% ^
+    --bazel_options=--config=win_clang ^
+    --bazel_options="--experimental_ui_max_stdouterr_bytes=8000000"
 if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
 
-:: Manually copy wheel with correct pattern (build.py is using wrong pattern)
 if not exist dist mkdir dist
 copy /Y bazel-bin\jaxlib\tools\dist\jaxlib-*.whl dist\
 if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
@@ -100,10 +76,11 @@ bazel clean --expunge
 bazel shutdown
 
 :: Install generated wheels
-%PYTHON% -m pip install --find-links=dist jaxlib --no-build-isolation --no-deps -vv
+%PYTHON% -m pip install --find-links=dist jaxlib -vv --no-build-isolation --no-deps
 if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
 
 :: Copy DLL files to the conda bin dir
+:: Necessary to eliminate overlinking errors when --error-overlinking is passed to conda-build
 for /r "%PREFIX%\Lib\site-packages\jaxlib" %%i in (*.dll) do (
     echo Copying %%~nxi
     copy /Y "%%i" "%LIBRARY_BIN%\"
