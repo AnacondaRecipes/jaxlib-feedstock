@@ -1,17 +1,32 @@
+# jaxlib wants clang on all platforms
+c_compiler:
+  - clang
+cxx_compiler:
+  - clangxx  # [unix]
+  - clang  # [win]
+c_compiler_version:
+  - '20'
+cxx_compiler_version:
+  - '20'
+
 gpu_variant:
   - cpu
-  - cuda-12                    # [(linux and x86_64)]
+# TODO: Skip CUDA builds for now since this package requires at least GCC 14 to build and we don't have CUDA built
+#       with GCC 14 yet.
+#  - cuda-12                    # [(linux and x86_64)]
 
 cuda_compiler_version:
-  - None                       
-  - 12.4                       # [(linux and x86_64)]
+  - None
+# TODO: Skip CUDA builds for now since this package requires at least GCC 14 to build and we don't have CUDA built
+#       with GCC 14 yet.
+#  - 12.4                       # [(linux and x86_64)]
+cuda_compiler:                 # [(linux and x86_64)]
+  - cuda-nvcc                  # [(linux and x86_64)]
 
 cudnn:                         # [(linux and x86_64)]
   - '9.1.1.17'                 # [(linux and x86_64)]
 nccl:                          # [(linux and x86_64)]
   - '2.21.5.1'                 # [(linux and x86_64)]
-cuda_compiler:                 # [(linux and x86_64)]
-  - cuda-nvcc                  # [(linux and x86_64)]
 
 zip_keys:                      # [(linux and x86_64)]
   -                            # [(linux and x86_64)]
