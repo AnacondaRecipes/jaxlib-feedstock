@@ -1,6 +1,6 @@
 {% set name = 'jaxlib' %}
 {% set version = "0.7.2" %}
-{% set build = 0 %}
+{% set build = 1 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -28,7 +28,7 @@ build:
   number: {{ build }}
   # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
   skip: true  # [py<311]
-  skip: true  # [cuda_compiler_version != "None" and aarch64]
+  skip: true  # [cuda_compiler_version != "None" and osx]
   # TODO: re-enable after symlinks on PBP work again. See SIR-2371
   skip: true  # [win]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
@@ -36,6 +36,10 @@ build:
 
 requirements:
   build:
+    # Make sure we use GCC 14 and libstdc++ 14 for CUDA builds on Linux
+    - libgcc-ng 14                           # [cuda_compiler_version != "None" and linux]
+    - libstdcxx-ng 14                        # [cuda_compiler_version != "None" and linux]
+    - libgcc-devel_{{ target_platform }} 14  # [cuda_compiler_version != "None" and linux]
     - {{ stdlib('c') }}
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
@@ -137,11 +141,9 @@ about:
     JAX is a Python library for accelerator-oriented array computation and program transformation, designed for
     high-performance numerical computing and large-scale machine learning.
   dev_url: https://github.com/jax-ml/jax
-  doc_url: https://github.com/jax-ml/jax/blob/main/README.md
+  doc_url: https://docs.jax.dev
 
 extra:
-  skip-lints:
-    - deprecated_python_install_command
   recipe-maintainers:
     - ehfd
     - ericmjl

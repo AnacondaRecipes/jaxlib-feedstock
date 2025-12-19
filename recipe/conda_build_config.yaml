@@ -9,26 +9,10 @@ c_compiler_version:
 cxx_compiler_version:
   - '20'
 
-gpu_variant:
-  - cpu
-# TODO: Skip CUDA builds for now since this package requires at least GCC 14 to build and we don't have CUDA built
-#       with GCC 14 yet.
-#  - cuda-12                    # [(linux and x86_64)]
-
+# Check JAX OS support for CUDA: https://docs.jax.dev/en/latest/installation.html#supported-platforms
+#  * As of v0.7.2, jaxlib supports CUDA 12.x on Linux x86_64 and aarch64
+#  * CUDA 12.x support may be removed in the future releases of jaxlib.
+#  * CUDA 13.0 support is added in jaxlib >=0.8.0: https://github.com/jax-ml/jax/discussions/31118#discussioncomment-14457667
 cuda_compiler_version:
   - None
-# TODO: Skip CUDA builds for now since this package requires at least GCC 14 to build and we don't have CUDA built
-#       with GCC 14 yet.
-#  - 12.4                       # [(linux and x86_64)]
-cuda_compiler:                 # [(linux and x86_64)]
-  - cuda-nvcc                  # [(linux and x86_64)]
-
-cudnn:                         # [(linux and x86_64)]
-  - '9.1.1.17'                 # [(linux and x86_64)]
-nccl:                          # [(linux and x86_64)]
-  - '2.21.5.1'                 # [(linux and x86_64)]
-
-zip_keys:                      # [(linux and x86_64)]
-  -                            # [(linux and x86_64)]
-    - gpu_variant              # [(linux and x86_64)]
-    - cuda_compiler_version    # [(linux and x86_64)]
+  - 12.8  # [linux]
