@@ -1,2 +1,2 @@
-# Set PBP timeout to 16 hrs
-task_timeout: 57600
+build_env_vars:
+  ANACONDA_ROCKET_ENABLE_PY314 : yes
