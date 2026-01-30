@@ -27,8 +27,10 @@ Co-Authored-By: H. Vetinari <h.vetinari@gmx.com>
  .../xla/0010-Update-gloo-version.patch        |  24 +
  .../0011-Add-macos_x86_64-to-mkl_deps.patch   |  21 +
  .../xla/0012-Add-systemlib-for-oneDNN.patch   |  35 ++
- third_party/xla/workspace.bzl                 |  16 +-
- 14 files changed, 1099 insertions(+), 1 deletion(-)
+ .../xla/0013-fix-multiple-definitions.patch   | 122 ++++++
+ .../0014-Disable-leave-barriers-flag.patch    |  65 +++
+ third_party/xla/workspace.bzl                 |  18 +-
+ 16 files changed, 1288 insertions(+), 1 deletion(-)
  create mode 100644 third_party/grpc_systemlib.BUILD
  create mode 100644 third_party/xla/0001-Support-third-party-build-of-boringssl.patch
  create mode 100644 third_party/xla/0002-Fix-abseil-headers.patch
@@ -42,10 +44,12 @@ Co-Authored-By: H. Vetinari <h.vetinari@gmx.com>
  create mode 100644 third_party/xla/0010-Update-gloo-version.patch
  create mode 100644 third_party/xla/0011-Add-macos_x86_64-to-mkl_deps.patch
  create mode 100644 third_party/xla/0012-Add-systemlib-for-oneDNN.patch
+ create mode 100644 third_party/xla/0013-fix-multiple-definitions.patch
+ create mode 100644 third_party/xla/0014-Disable-leave-barriers-flag.patch
 
 diff --git a/third_party/grpc_systemlib.BUILD b/third_party/grpc_systemlib.BUILD
 new file mode 100644
-index 0000000..0e4e862
+index 000000000..0e4e862ce
 --- /dev/null
 +++ b/third_party/grpc_systemlib.BUILD
 @@ -0,0 +1,71 @@
@@ -122,7 +126,7 @@ index 0000000..0e4e862
 +)
 diff --git a/third_party/xla/0001-Support-third-party-build-of-boringssl.patch b/third_party/xla/0001-Support-third-party-build-of-boringssl.patch
 new file mode 100644
-index 0000000..2e4b647
+index 000000000..2e4b64711
 --- /dev/null
 +++ b/third_party/xla/0001-Support-third-party-build-of-boringssl.patch
 @@ -0,0 +1,50 @@
@@ -178,7 +182,7 @@ index 0000000..2e4b647
 + 
 diff --git a/third_party/xla/0002-Fix-abseil-headers.patch b/third_party/xla/0002-Fix-abseil-headers.patch
 new file mode 100644
-index 0000000..5a74714
+index 000000000..5a74714cc
 --- /dev/null
 +++ b/third_party/xla/0002-Fix-abseil-headers.patch
 @@ -0,0 +1,101 @@
@@ -285,7 +289,7 @@ index 0000000..5a74714
 +         "@com_google_absl//absl/time",
 diff --git a/third_party/xla/0003-Omit-usage-of-StrFormat.patch b/third_party/xla/0003-Omit-usage-of-StrFormat.patch
 new file mode 100644
-index 0000000..fc03f77
+index 000000000..fc03f77be
 --- /dev/null
 +++ b/third_party/xla/0003-Omit-usage-of-StrFormat.patch
 @@ -0,0 +1,25 @@
@@ -316,7 +320,7 @@ index 0000000..fc03f77
 + #include <vector>
 diff --git a/third_party/xla/0004-Re-enable-system-abseil.patch b/third_party/xla/0004-Re-enable-system-abseil.patch
 new file mode 100644
-index 0000000..7b8db67
+index 000000000..7b8db67a3
 --- /dev/null
 +++ b/third_party/xla/0004-Re-enable-system-abseil.patch
 @@ -0,0 +1,411 @@
@@ -733,7 +737,7 @@ index 0000000..7b8db67
 +         patch_file = [
 diff --git a/third_party/xla/0005-Check-whether-absl-log-is-already-initialized.patch b/third_party/xla/0005-Check-whether-absl-log-is-already-initialized.patch
 new file mode 100644
-index 0000000..a42504a
+index 000000000..a42504a4e
 --- /dev/null
 +++ b/third_party/xla/0005-Check-whether-absl-log-is-already-initialized.patch
 @@ -0,0 +1,58 @@
@@ -797,7 +801,7 @@ index 0000000..a42504a
 + }  // namespace xla
 diff --git a/third_party/xla/0006-Unbundle-grpc.patch b/third_party/xla/0006-Unbundle-grpc.patch
 new file mode 100644
-index 0000000..6128f25
+index 000000000..6128f250e
 --- /dev/null
 +++ b/third_party/xla/0006-Unbundle-grpc.patch
 @@ -0,0 +1,152 @@
@@ -955,7 +959,7 @@ index 0000000..6128f25
 +     # Load the raw llvm-project.  llvm does not have build rules set up by default,
 diff --git a/third_party/xla/0007-Disable-coordination_agent_recoverable-flag.patch b/third_party/xla/0007-Disable-coordination_agent_recoverable-flag.patch
 new file mode 100644
-index 0000000..c223006
+index 000000000..c2230069f
 --- /dev/null
 +++ b/third_party/xla/0007-Disable-coordination_agent_recoverable-flag.patch
 @@ -0,0 +1,35 @@
@@ -996,7 +1000,7 @@ index 0000000..c223006
 +            "barrier will only block non-recoverable tasks. If a synchronized "
 diff --git a/third_party/xla/0008-absl_bad_-optional-variant-_access-is-now-header-onl.patch b/third_party/xla/0008-absl_bad_-optional-variant-_access-is-now-header-onl.patch
 new file mode 100644
-index 0000000..433938e
+index 000000000..433938e6a
 --- /dev/null
 +++ b/third_party/xla/0008-absl_bad_-optional-variant-_access-is-now-header-onl.patch
 @@ -0,0 +1,29 @@
@@ -1031,7 +1035,7 @@ index 0000000..433938e
 +     ],
 diff --git a/third_party/xla/0009-Add-dependency-on-proto_bazel_features.patch b/third_party/xla/0009-Add-dependency-on-proto_bazel_features.patch
 new file mode 100644
-index 0000000..cc0bb70
+index 000000000..cc0bb7087
 --- /dev/null
 +++ b/third_party/xla/0009-Add-dependency-on-proto_bazel_features.patch
 @@ -0,0 +1,72 @@
@@ -1109,7 +1113,7 @@ index 0000000..cc0bb70
 +     http_archive(
 diff --git a/third_party/xla/0010-Update-gloo-version.patch b/third_party/xla/0010-Update-gloo-version.patch
 new file mode 100644
-index 0000000..6657c48
+index 000000000..6657c48e4
 --- /dev/null
 +++ b/third_party/xla/0010-Update-gloo-version.patch
 @@ -0,0 +1,24 @@
@@ -1139,7 +1143,7 @@ index 0000000..6657c48
 +         name = "gloo",
 diff --git a/third_party/xla/0011-Add-macos_x86_64-to-mkl_deps.patch b/third_party/xla/0011-Add-macos_x86_64-to-mkl_deps.patch
 new file mode 100644
-index 0000000..0907f79
+index 000000000..0907f796b
 --- /dev/null
 +++ b/third_party/xla/0011-Add-macos_x86_64-to-mkl_deps.patch
 @@ -0,0 +1,21 @@
@@ -1166,7 +1170,7 @@ index 0000000..0907f79
 +     })
 diff --git a/third_party/xla/0012-Add-systemlib-for-oneDNN.patch b/third_party/xla/0012-Add-systemlib-for-oneDNN.patch
 new file mode 100644
-index 0000000..a2a69d4
+index 000000000..a2a69d4da
 --- /dev/null
 +++ b/third_party/xla/0012-Add-systemlib-for-oneDNN.patch
 @@ -0,0 +1,35 @@
@@ -1205,11 +1209,210 @@ index 0000000..a2a69d4
 +         sha256 = "071f289dc961b43a3b7c8cbe8a305290a7c5d308ec4b2f586397749abdc88296",
 +         strip_prefix = "oneDNN-3.7.3",
 +         urls = tf_mirror_urls("https://github.com/oneapi-src/oneDNN/archive/refs/tags/v3.7.3.tar.gz"),
+diff --git a/third_party/xla/0013-fix-multiple-definitions.patch b/third_party/xla/0013-fix-multiple-definitions.patch
+new file mode 100644
+index 000000000..3c92e11fb
+--- /dev/null
++++ b/third_party/xla/0013-fix-multiple-definitions.patch
+@@ -0,0 +1,122 @@
++From a37efb5841ca3c8f500659c4ae0608bfd6347a47 Mon Sep 17 00:00:00 2001
++From: Eric Lundby <Eric.Lundby@gmail.com>
++Date: Wed, 28 Jan 2026 08:14:46 -0700
++Subject: [PATCH 1/1] 0013
++
++ERROR: Flag 'leave_barriers_on_recoverable_agent_restart' was defined more than once but with differing types. Defined in files 'external/local_xla/xla/tsl/distributed_runtime/coordination/coordination_service.cc' and 'external/local_xla/xla/tsl/distributed_runtime/coordination/coordination_service.cc'.
++
++See: https://github.com/AnacondaRecipes/tensorflow-feedstock/blob/main/recipe/patches/0022-fix-multiple-flag-defs.patch
++
++---
++ xla/pjrt/distributed/BUILD                    |  2 +-
++ xla/pjrt/gpu/BUILD                            |  2 +-
++ .../distributed_runtime/coordination/BUILD    | 46 ++++++++++++++++++-
++ .../rpc/coordination/BUILD                    |  2 +-
++ 4 files changed, 48 insertions(+), 4 deletions(-)
++
++diff --git a/xla/pjrt/distributed/BUILD b/xla/pjrt/distributed/BUILD
++index e8528f51b3..a177ca422b 100644
++--- a/xla/pjrt/distributed/BUILD
+++++ b/xla/pjrt/distributed/BUILD
++@@ -25,7 +25,7 @@ cc_library(
++         ":util",
++         "//xla:types",
++         "//xla:util",
++-        "//xla/tsl/distributed_runtime/coordination:coordination_service",
+++        "//xla/tsl/distributed_runtime/coordination:coordination_service_hdrs_only",
++         "//xla/tsl/distributed_runtime/rpc:async_service_interface",
++         "//xla/tsl/distributed_runtime/rpc/coordination:grpc_coordination_service_impl",
++         "//xla/tsl/protobuf:coordination_config_proto_cc",
++diff --git a/xla/pjrt/gpu/BUILD b/xla/pjrt/gpu/BUILD
++index 41ccb2450a..5be365e31c 100644
++--- a/xla/pjrt/gpu/BUILD
+++++ b/xla/pjrt/gpu/BUILD
++@@ -122,7 +122,7 @@ cc_library(
++         "//xla/stream_executor/integrations:tf_allocator_adapter",
++         "//xla/tsl/concurrency:async_value",
++         "//xla/tsl/concurrency:ref_count",
++-        "//xla/tsl/distributed_runtime/coordination:coordination_service",
+++        "//xla/tsl/distributed_runtime/coordination:coordination_service_hdrs_only",
++         "//xla/tsl/distributed_runtime/coordination:coordination_service_agent",
++         "//xla/tsl/framework:allocator",
++         "//xla/tsl/framework:bfc_allocator",
++diff --git a/xla/tsl/distributed_runtime/coordination/BUILD b/xla/tsl/distributed_runtime/coordination/BUILD
++index 3429acaba3..a71d2d3a62 100644
++--- a/xla/tsl/distributed_runtime/coordination/BUILD
+++++ b/xla/tsl/distributed_runtime/coordination/BUILD
++@@ -50,7 +50,7 @@ cc_library(
++ )
++ 
++ cc_library(
++-    name = "coordination_service",
+++    name = "coordination_service_impl",
++     srcs = ["coordination_service.cc"],
++     hdrs = ["coordination_service.h"],
++     deps = [
++@@ -86,6 +86,50 @@ cc_library(
++     ],
++ )
++ 
+++ 
+++cc_library(
+++    name = "coordination_service",
+++    deps = [":coordination_service_impl"],
+++    visibility = ["//visibility:public"],
+++)
+++
+++cc_library(
+++    name = "coordination_service_hdrs_only",
+++    hdrs = ["coordination_service.h"],
+++    deps = [
+++        ":coordination_client",
+++        ":coordination_service_error_util",
+++        ":key_value_store",
+++        "//xla/tsl/distributed_runtime:call_options",
+++        "//xla/tsl/lib/gtl:int_type",
+++        "//xla/tsl/platform:env",
+++        "//xla/tsl/platform:errors",
+++        "//xla/tsl/platform:status",
+++        "//xla/tsl/protobuf:coordination_config_proto_cc",
+++        "//xla/tsl/protobuf:coordination_service_proto_cc",
+++        "//xla/tsl/util:device_name_utils",
+++        "@com_google_absl//absl/algorithm:container",
+++        "@com_google_absl//absl/base:core_headers",
+++        "@com_google_absl//absl/container:flat_hash_map",
+++        "@com_google_absl//absl/container:flat_hash_set",
+++        "@com_google_absl//absl/flags:flag",
+++        "@com_google_absl//absl/functional:any_invocable",
+++        "@com_google_absl//absl/hash",
+++        "@com_google_absl//absl/log",
+++        "@com_google_absl//absl/log:check",
+++        "@com_google_absl//absl/status",
+++        "@com_google_absl//absl/status:statusor",
+++        "@com_google_absl//absl/strings",
+++        "@com_google_absl//absl/strings:str_format",
+++        "@com_google_absl//absl/strings:string_view",
+++        "@com_google_absl//absl/synchronization",
+++        "@com_google_absl//absl/time",
+++        "@com_google_absl//absl/types:span",
+++        "@tsl//tsl/platform:random",
+++    ],
+++    visibility = ["//visibility:public"],
+++)
+++
++ tf_proto_library(
++     name = "test_device_proto",
++     testonly = 1,
++diff --git a/xla/tsl/distributed_runtime/rpc/coordination/BUILD b/xla/tsl/distributed_runtime/rpc/coordination/BUILD
++index 4fe8e5015a..562fa8b777 100644
++--- a/xla/tsl/distributed_runtime/rpc/coordination/BUILD
+++++ b/xla/tsl/distributed_runtime/rpc/coordination/BUILD
++@@ -36,7 +36,7 @@ cc_library(
++     srcs = ["grpc_coordination_service_impl.cc"],
++     hdrs = ["grpc_coordination_service_impl.h"],
++     deps = [
++-        "//xla/tsl/distributed_runtime/coordination:coordination_service",
+++        "//xla/tsl/distributed_runtime/coordination:coordination_service_hdrs_only",
++         "//xla/tsl/distributed_runtime/coordination:coordination_service_agent",
++         "//xla/tsl/distributed_runtime/coordination:coordination_service_rpc_handler",
++         "//xla/tsl/distributed_runtime/rpc:async_service_interface",
++-- 
++2.50.1 (Apple Git-155)
++
+diff --git a/third_party/xla/0014-Disable-leave-barriers-flag.patch b/third_party/xla/0014-Disable-leave-barriers-flag.patch
+new file mode 100644
+index 000000000..e102a6edb
+--- /dev/null
++++ b/third_party/xla/0014-Disable-leave-barriers-flag.patch
+@@ -0,0 +1,65 @@
++From 8f8c5d36414a638ab2e1906975a5b609669a1cdb Mon Sep 17 00:00:00 2001
++From: Eric Lundby <Eric.Lundby@gmail.com>
++Date: Wed, 28 Jan 2026 14:53:54 -0700
++Subject: [PATCH 1/1] 14
++
++---
++ .../coordination/coordination_service.cc           | 14 +++++++-------
++ 1 file changed, 7 insertions(+), 7 deletions(-)
++
++diff --git a/xla/tsl/distributed_runtime/coordination/coordination_service.cc b/xla/tsl/distributed_runtime/coordination/coordination_service.cc
++index 8667719a50..ddf8d82056 100644
++--- a/xla/tsl/distributed_runtime/coordination/coordination_service.cc
+++++ b/xla/tsl/distributed_runtime/coordination/coordination_service.cc
++@@ -53,9 +53,9 @@ limitations under the License.
++ #include "xla/tsl/protobuf/coordination_service.pb.h"
++ #include "xla/tsl/util/device_name_utils.h"
++ 
++-ABSL_FLAG(bool, leave_barriers_on_recoverable_agent_restart, false,
++-          "If true, allow the recoverable agent to leave ongoing barriers on "
++-          "restart.");
+++// ABSL_FLAG(bool, leave_barriers_on_recoverable_agent_restart, false,
+++//           "If true, allow the recoverable agent to leave ongoing barriers on "
+++//           "restart.");
++ 
++ namespace tsl {
++ namespace {
++@@ -312,7 +312,7 @@ CoordinationService::GetCountOfOutOfSyncTasksPerBarrier() {
++ }
++ 
++ void CoordinationService::CheckBarrierStatusWithRecoverableTasks() {
++-  if (!absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++  if (!false) {
++     return;
++   }
++ 
++@@ -555,7 +555,7 @@ void CoordinationService::ConnectTask(const CoordinatedTask& task,
++   task_state->Connect();
++   if (task_state->IsRecoverable()) {
++     LeaveOngoingBarriers(task, "recoverable task silently connected again");
++-    if (absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++    if (false) {
++       unsynced_recoverable_jobs_.insert(task_name);
++     }
++   }
++@@ -619,7 +619,7 @@ void CoordinationService::RegisterTaskAsync(const CoordinatedTask& task,
++       // again. When the task passes a barrier with other tasks, it will be
++       // removed from the unsynced set.
++       if (task_cluster_state->IsRecoverable() &&
++-          absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++          false) {
++         if (barriers_.contains(kClusterRegisterBarrierId) &&
++             barriers_[kClusterRegisterBarrierId].passed) {
++           // We want to mark the task unsynced when it connects again. When the
++@@ -1723,7 +1723,7 @@ void CoordinationService::LeaveOngoingBarriers(const CoordinatedTask& task,
++     for (const auto& barrier_id : task_state->GetOngoingBarriers()) {
++       BarrierState* barrier = &barriers_[barrier_id];
++       // Unregister task from barrier.
++-      if (absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++      if (false) {
++         if (barrier->tasks_at_barrier.contains(task)) {
++           // Remove task from barrier.
++           barrier->recoverable_tasks_restarted_during_barrier.insert(task);
++-- 
++2.50.1 (Apple Git-155)
++
 diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
-index be345f8..f2c0bf0 100644
+index be345f8c6..0284dd4fd 100644
 --- a/third_party/xla/workspace.bzl
 +++ b/third_party/xla/workspace.bzl
-@@ -26,6 +26,20 @@ def repo():
+@@ -26,6 +26,22 @@ def repo():
          # web links (`/archive/`) links so we use the GitHub API endpoint to get the tarball
          # instead.
          urls = tf_mirror_urls("https://api.github.com/repos/openxla/xla/tarball/{commit}".format(commit = XLA_COMMIT)),
@@ -1226,13 +1429,18 @@ index be345f8..f2c0bf0 100644
 +            "//third_party/xla:0010-Update-gloo-version.patch",
 +            "//third_party/xla:0011-Add-macos_x86_64-to-mkl_deps.patch",
 +            "//third_party/xla:0012-Add-systemlib-for-oneDNN.patch",
++            "//third_party/xla:0013-fix-multiple-definitions.patch",
++            "//third_party/xla:0014-Disable-leave-barriers-flag.patch",
 +        ],
      )
  
      # For development, one often wants to make changes to the TF repository as well
-@@ -39,4 +53,4 @@ def repo():
+@@ -39,4 +55,4 @@ def repo():
      # local_repository(
      #    name = "xla",
      #    path = "/path/to/xla",
 -    # )
 +   # )
+-- 
+2.50.1 (Apple Git-155)
+

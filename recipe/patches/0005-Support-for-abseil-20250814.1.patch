@@ -4,16 +4,16 @@ Date: Thu, 4 Dec 2025 16:23:07 -0800
 Subject: [PATCH] Support for abseil 20250814.1
 
 ---
- ...13-Remove-abs_low_level_hash-linkage.patch | 24 +++++++++++++++++++
+ ...15-Remove-abs_low_level_hash-linkage.patch | 24 +++++++++++++++++++
  third_party/xla/workspace.bzl                 |  1 +
  2 files changed, 25 insertions(+)
- create mode 100644 third_party/xla/0013-Remove-abs_low_level_hash-linkage.patch
+ create mode 100644 third_party/xla/0015-Remove-abs_low_level_hash-linkage.patch
 
-diff --git a/third_party/xla/0013-Remove-abs_low_level_hash-linkage.patch b/third_party/xla/0013-Remove-abs_low_level_hash-linkage.patch
+diff --git a/third_party/xla/0015-Remove-abs_low_level_hash-linkage.patch b/third_party/xla/0015-Remove-abs_low_level_hash-linkage.patch
 new file mode 100644
 index 000000000..dada9a802
 --- /dev/null
-+++ b/third_party/xla/0013-Remove-abs_low_level_hash-linkage.patch
++++ b/third_party/xla/0015-Remove-abs_low_level_hash-linkage.patch
 @@ -0,0 +1,24 @@
 +From f0d133b060f767ac4fbc110a705570c04c4b55cc Mon Sep 17 00:00:00 2001
 +From: Onur Bingol <obingol@anaconda.com>
@@ -40,14 +40,14 @@ index 000000000..dada9a802
 +2.50.1 (Apple Git-155)
 +
 diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
-index f2c0bf02d..21f45c8ca 100644
+index 0284dd4fd..21f45c8ca 100644
 --- a/third_party/xla/workspace.bzl
 +++ b/third_party/xla/workspace.bzl
-@@ -39,6 +39,7 @@ def repo():
-             "//third_party/xla:0010-Update-gloo-version.patch",
-             "//third_party/xla:0011-Add-macos_x86_64-to-mkl_deps.patch",
+@@ -41,6 +41,7 @@ def repo():
              "//third_party/xla:0012-Add-systemlib-for-oneDNN.patch",
-+            "//third_party/xla:0013-Remove-abs_low_level_hash-linkage.patch",
+             "//third_party/xla:0013-fix-multiple-definitions.patch",
+             "//third_party/xla:0014-Disable-leave-barriers-flag.patch",
++            "//third_party/xla:0015-Remove-abs_low_level_hash-linkage.patch",
          ],
      )
  
