@@ -180,6 +180,7 @@ sed -i '/local_config_apple/d' .bazelrc
 if [[ "${target_platform}" == linux-* ]]; then
     EXTRA="${EXTRA} --clang_path $CC"
     EXTRA="${EXTRA} --bazel_options=--copt=-include --bazel_options=--copt=string.h"
+    EXTRA="${EXTRA} --bazel_options=--copt=-D_GNU_SOURCE"
 
     # Remove incompatible argument from bazelrc
     sed -i '/Qunused-arguments/d' .bazelrc
