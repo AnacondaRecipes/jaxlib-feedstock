@@ -1465,12 +1465,6 @@ index be345f8c6..0284dd4fd 100644
      )
  
      # For development, one often wants to make changes to the TF repository as well
-@@ -39,4 +55,4 @@ def repo():
-     # local_repository(
-     #    name = "xla",
-     #    path = "/path/to/xla",
--    # )
-+   # )
 -- 
 2.50.1 (Apple Git-155)
 
