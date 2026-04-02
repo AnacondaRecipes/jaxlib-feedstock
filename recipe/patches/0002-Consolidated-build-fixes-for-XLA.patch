@@ -326,9 +326,9 @@ index 000000000..fc03f77be
 +++ b/third_party/xla/0003b-Fix-string-include.patch
 @@ -0,0 +1,27 @@
 +From aae46f4c56e5e426d3d1c9516d343f94484e4b78 Mon Sep 17 00:00:00 2001
-+From: "Uwe L. Korn" <uwe.korn@quantco.com>
-+Date: Thu, 23 May 2024 15:45:52 +0200
-+Subject: [PATCH 02/12] Fix abseil headers
++From: "Valentyna Khomis" <vkhomits@anaconda.com>
++Date: Thu, 2 Apr 2026 14:18:51 +0200
++Subject: [PATCH 03/15] Fix abseil headers
 +
 +---
 + xla/service/custom_call_status_internal.h | 3 ++-
