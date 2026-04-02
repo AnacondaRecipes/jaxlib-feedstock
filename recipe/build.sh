@@ -101,6 +101,11 @@ build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --define=with_cross_compiler_support=true
 build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
+# Fix memchr not declared in re2 with newer gcc
+build --per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
+build --host_per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
+build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
+build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
 
 # We need to define a dummy value for this as we delete everything else for build_cuda_with_nvcc
 build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1
@@ -179,6 +184,7 @@ fi
 sed -i '/local_config_apple/d' .bazelrc
 if [[ "${target_platform}" == linux-* ]]; then
     EXTRA="${EXTRA} --clang_path $CC"
+    EXTRA="${EXTRA} --bazel_options=--copt=-D_GNU_SOURCE"
 
     # Remove incompatible argument from bazelrc
     sed -i '/Qunused-arguments/d' .bazelrc
