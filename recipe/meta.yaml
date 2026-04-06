@@ -1,6 +1,6 @@
 {% set name = 'jaxlib' %}
 {% set version = "0.7.2" %}
-{% set build = 3 %}
+{% set build = 4 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -29,8 +29,6 @@ build:
   # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
   skip: true  # [py<311]
   skip: true  # [cuda_compiler_version != "None" and osx]
-  # TODO: re-enable after symlinks on PBP work again. See SIR-2371
-  skip: true  # [win]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
