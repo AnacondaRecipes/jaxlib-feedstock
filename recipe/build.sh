@@ -233,23 +233,18 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # applies to the target compile config; host/exec compiles ([for tool] in
 # log) hit the rejection. Workaround: copy the headers into the workspace
 # and pass the include path as a workspace-relative directory.
-# Bazel's strict inclusion check rejects headers found via `--copt=-isystem`
-# pointing into the workspace as "undeclared inclusion(s)". The fix is to
-# register $PREFIX/include in cc_toolchain's cxx_builtin_include_directories
-# so bazel treats it as a trusted system include path (no strict tracking).
-# gen-bazel-toolchain processes cc_toolchain_config.bzl with placeholders;
-# inject $PREFIX/include into the cxx_builtin_include_directories list.
-echo "===== DEBUG: bazel_toolchain/cc_toolchain_config.bzl head ====="
-head -80 bazel_toolchain/cc_toolchain_config.bzl 2>&1 || true
-echo "===== DEBUG: cxx_builtin_include_directories pattern check ====="
-grep -nE "cxx_builtin_include_directories|builtin_include_directories" bazel_toolchain/cc_toolchain_config.bzl 2>&1 || true
-# Best-effort sed: try to inject our system include path after the opening
-# of cxx_builtin_include_directories list. If the pattern doesn't match,
-# nothing changes (no harm) and we'll see the file structure in next log.
-sed -i 's|cxx_builtin_include_directories = \[|cxx_builtin_include_directories = [\n        "'"$PREFIX/include"'",\n        "'"$BUILD_PREFIX/include"'",|' \
-    bazel_toolchain/cc_toolchain_config.bzl 2>/dev/null || true
-echo "===== DEBUG: after sed, grep for our paths ====="
-grep -nE "$PREFIX/include|$BUILD_PREFIX/include" bazel_toolchain/cc_toolchain_config.bzl 2>&1 | head -5 || true
+# cc_toolchain_config.bzl already lists $PREFIX/include in
+# cxx_builtin_include_directories, but as the LITERAL string "$PREFIX/include"
+# (bare, not ${PREFIX}). gen-bazel-toolchain's sed handles ${...} form only,
+# leaving bare $PREFIX unexpanded. Bazel then looks for a directory literally
+# named "$PREFIX/include" and fails to find any system headers, causing
+# "fatal error: 'absl/...' file not found" during host/exec compiles.
+# Fix: explicitly sed bare $PREFIX and $BUILD_PREFIX in the bzl file.
+sed -i "s|\\\$PREFIX|$PREFIX|g" bazel_toolchain/cc_toolchain_config.bzl
+sed -i "s|\\\$BUILD_PREFIX|$BUILD_PREFIX|g" bazel_toolchain/cc_toolchain_config.bzl
+sed -i "s|\\\$SRC_DIR|$SRC_DIR|g" bazel_toolchain/cc_toolchain_config.bzl
+echo "===== DEBUG: cxx_builtin_include_directories after expansion ====="
+grep -nE "PREFIX/include|cxx_builtin_include_directories" bazel_toolchain/cc_toolchain_config.bzl 2>&1 | head -10 || true
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
