@@ -45,7 +45,9 @@ requirements:
     - rsync                           # [cuda_compiler_version != "None"]
     - unzip                           # [unix]
     - bazel 7.*
-    - bazel-toolchain >=0.5.8         # [unix]
+    # pkgs/main maxes out at 0.4.1; conda-forge has >=0.5.8 but they're on
+    # a different channel. 0.4.1 is what 0.7.2 shipped with.
+    - bazel-toolchain >=0.4.1         # [unix]
     # need protoc
     - libprotobuf                     # [unix]
     # needs protoc-gen-grpc
