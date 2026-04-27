@@ -227,11 +227,16 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/
 EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel"
 # protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
 # (and friends). Those headers ship with libprotobuf at $PREFIX/include/.
-# bazel rejects -I<absolute path outside workspace> with "references a path
-# outside of the execution root", but -isystem bypasses that check (same
-# convention conda's cc_toolchain CXXFLAGS uses with -isystem $PREFIX/include).
-EXTRA="${EXTRA} --bazel_options=--copt=-isystem${PREFIX}/include"
-EXTRA="${EXTRA} --bazel_options=--host_copt=-isystem${PREFIX}/include"
+# Bazel rejects user-supplied -I/-isystem to absolute paths outside the
+# workspace ("references a path outside of the execution root"). The
+# cc_toolchain CXXFLAGS sed-replace uses -isystem $PREFIX/include but only
+# applies to the target compile config; host/exec compiles ([for tool] in
+# log) hit the rejection. Workaround: copy the headers into the workspace
+# and pass the include path as a workspace-relative directory.
+mkdir -p $SRC_DIR/conda_includes
+cp -rL $PREFIX/include/google $SRC_DIR/conda_includes/
+EXTRA="${EXTRA} --bazel_options=--copt=-isystemconda_includes"
+EXTRA="${EXTRA} --bazel_options=--host_copt=-isystemconda_includes"
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
