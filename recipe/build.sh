@@ -129,11 +129,6 @@ build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
 # jaxlib 0.9.x XLA's protobuf_impl.bzl requires PROTOBUF_BAZEL_DIR to locate
 # the bazel rules from the protobuf-bazel-rules host package.
 build --repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel
-# Vendored re2 in XLA needs explicit <cstring> for memchr under newer gcc
-# (we don't unvendor re2 like conda-forge does). Targeted by regex — no-op if
-# the file structure changes upstream. (vkhomits, jaxlib-feedstock#25)
-build --per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
-build --host_per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
 # XLA's nvtx_utils may be missing a <string> include depending on the pinned
 # XLA commit. Defensive per-file include. (vkhomits, jaxlib-feedstock#25)
 build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
@@ -159,13 +154,17 @@ fi
 
 # Force static linkage with protobuf to avoid definition collisions,
 # see https://github.com/conda-forge/jaxlib-feedstock/issues/89
-#
-# Thus: don't add com_google_protobuf here.
+# We have modified the system_lib BUILD here to link to libprotobuf.a from
+# the libprotobuf-static host package; com_google_protobuf MUST be in
+# TF_SYSTEM_LIBS so bazel uses the patched system_lib BUILD (which references
+# $(BUILD_PREFIX)/lib/libprotobuf.a) instead of the vendored protobuf source.
 export TF_SYSTEM_LIBS="
   boringssl,
   com_github_googlecloudplatform_google_cloud_cpp,
   com_github_grpc_grpc,
   com_google_absl,
+  com_googlesource_code_re2,
+  com_google_protobuf,
   flatbuffers,
   zlib
 "
