@@ -111,6 +111,19 @@ fi
 
 source gen-bazel-toolchain
 
+# pkgs/main's bazel-toolchain 0.4.1 doesn't declare the conda_target_platform /
+# conda_build_platform constraints that conda-forge's >=0.5.8 emits.
+# Our patched XLA protobuf BUILD references @//bazel_toolchain:conda_target_platform
+# in a config_setting select(). Append the missing constraints so bazel can parse
+# them; since we don't cross-compile here (build_platform == target_platform),
+# the select() correctly falls through to the BUILD_PREFIX branch by default.
+cat >> bazel_toolchain/BUILD <<'BAZEL_EOF'
+
+constraint_setting(name = "conda_platform")
+constraint_value(name = "conda_target_platform", constraint_setting = ":conda_platform")
+constraint_value(name = "conda_build_platform", constraint_setting = ":conda_platform")
+BAZEL_EOF
+
 # Use line-by-line echo with unquoted vars so bash expands them at write time.
 # Heredoc + conda-build text-file prefix substitution interacts badly: heredoc
 # writes real paths but conda-build later rewrites them back to literal
