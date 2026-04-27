@@ -128,6 +128,15 @@ build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
 # jaxlib 0.9.x XLA's protobuf_impl.bzl requires PROTOBUF_BAZEL_DIR to locate
 # the bazel rules from the protobuf-bazel-rules host package.
 build --repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel
+# Vendored re2 in XLA needs explicit <cstring> for memchr under newer gcc
+# (we don't unvendor re2 like conda-forge does). Targeted by regex — no-op if
+# the file structure changes upstream. (vkhomits, jaxlib-feedstock#25)
+build --per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
+build --host_per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
+# XLA's nvtx_utils may be missing a <string> include depending on the pinned
+# XLA commit. Defensive per-file include. (vkhomits, jaxlib-feedstock#25)
+build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
+build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
 
 # We need to define a dummy value for this as we delete everything else for build_cuda_with_nvcc
 build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1
@@ -206,6 +215,9 @@ fi
 sed -i '/local_config_apple/d' .bazelrc
 if [[ "${target_platform}" == linux-* ]]; then
     EXTRA="${EXTRA} --clang_path $CC"
+    # Defensive: enable glibc extensions for transitively-vendored deps that
+    # rely on them (e.g., pthread_setname_np, etc.). (vkhomits, jaxlib-feedstock#25)
+    EXTRA="${EXTRA} --bazel_options=--copt=-D_GNU_SOURCE"
 
     # Remove incompatible argument from bazelrc
     sed -i '/Qunused-arguments/d' .bazelrc
