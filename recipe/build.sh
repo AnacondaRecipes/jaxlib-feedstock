@@ -225,6 +225,13 @@ EXTRA="${EXTRA} --bazel_options=--define=PREFIX=${PREFIX}"
 EXTRA="${EXTRA} --bazel_options=--define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include"
 EXTRA="${EXTRA} --bazel_options=--repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel"
 EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel"
+# protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
+# (and friends). Those headers ship with libprotobuf at $PREFIX/include/.
+# bazel's cc_toolchain CXXFLAGS sed didn't propagate -isystem $PREFIX/include
+# to every action (verified by grepping the actual clang invocation), so add
+# them explicitly via copt + host_copt for both target and exec configs.
+EXTRA="${EXTRA} --bazel_options=--copt=-I${PREFIX}/include"
+EXTRA="${EXTRA} --bazel_options=--host_copt=-I${PREFIX}/include"
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
