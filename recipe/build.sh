@@ -111,7 +111,7 @@ fi
 
 source gen-bazel-toolchain
 
-cat >> .bazelrc.user <<EOF
+cat >> .bazelrc <<EOF
 
 build --crosstool_top=//bazel_toolchain:toolchain
 build --platforms=//bazel_toolchain:target_platform
@@ -145,13 +145,13 @@ EOF
 
 # Use a fixed number instead of CPU_COUNT on linux-aarch64
 if [[ "${target_platform}" == "linux-aarch64" ]]; then
-  echo "build --local_resources=cpu=8" >> .bazelrc.user
+  echo "build --local_resources=cpu=8" >> .bazelrc
 else
-  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc.user
+  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc
 fi
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
-  echo "build --cpu=${TARGET_CPU}" >> .bazelrc.user
+  echo "build --cpu=${TARGET_CPU}" >> .bazelrc
 fi
 
 # For debugging
