@@ -35,6 +35,9 @@ echo build --define=PREFIX=%PREFIX:\=/% >> .bazelrc.user
 echo build --define=PROTOBUF_INCLUDE_PATH=%PREFIX:\=/%/include >> .bazelrc.user
 echo build --local_resources=cpu=%CPU_COUNT% >> .bazelrc.user
 echo build --repo_env=GRPC_BAZEL_DIR=%PREFIX:\=/%/share/bazel/grpc/bazel >> .bazelrc.user
+:: jaxlib 0.9.x XLA's protobuf_impl.bzl requires PROTOBUF_BAZEL_DIR to locate
+:: the bazel rules from the protobuf-bazel-rules host package.
+echo build --repo_env=PROTOBUF_BAZEL_DIR=%PREFIX:\=/%/share/bazel/protobuf/bazel >> .bazelrc.user
 
 :: _m_prefetchw is declared in both Clang and Windows SDK
 :: This can be removed after Clang 21 is released
