@@ -227,10 +227,45 @@ if [[ "${target_platform}" == linux-* ]]; then
     sed -i '/--crosstool_top=@local_config_cuda/d' .bazelrc
 fi
 
+# ------------- DEBUG OUTPUT (PKG-10582) -------------
+echo "===== DEBUG: env before bazel build ====="
+echo "BUILD_PREFIX=$BUILD_PREFIX"
+echo "PREFIX=$PREFIX"
+echo "TF_SYSTEM_LIBS=$TF_SYSTEM_LIBS"
+echo "PROTOBUF_BAZEL_DIR=${PROTOBUF_BAZEL_DIR:-<unset>}"
+echo "GRPC_BAZEL_DIR=${GRPC_BAZEL_DIR:-<unset>}"
+echo "===== DEBUG: ls libprotobuf-static .a files in BUILD_PREFIX/lib ====="
+ls -la "$BUILD_PREFIX/lib/" 2>&1 | grep -E "libprotobuf|libutf8|libprotoc" | head -10 || true
+echo "===== DEBUG: ls libprotobuf-static .a files in PREFIX/lib ====="
+ls -la "$PREFIX/lib/" 2>&1 | grep -E "libprotobuf|libutf8|libprotoc" | head -10 || true
+echo "===== DEBUG: protobuf-bazel-rules layout ====="
+ls -la "$PREFIX/share/bazel/protobuf/bazel/" 2>&1 | head -10 || true
+echo "===== DEBUG: tail of .bazelrc ====="
+tail -40 .bazelrc 2>&1
+echo "===== DEBUG: end ====="
+
 ${PYTHON} build/build.py build \
     --target_cpu_features default \
     --python_version $PY_VER \
-    ${EXTRA}
+    ${EXTRA} || BAZEL_BUILD_RC=$?
+
+# If bazel build failed, dump the offending BUILD file so we can see what's at line 119.
+if [[ -n "${BAZEL_BUILD_RC:-}" ]]; then
+  echo "===== DEBUG: bazel build failed (rc=$BAZEL_BUILD_RC); dumping protobuf BUILD ====="
+  PROTOBUF_BUILD=$(find ~/.cache/bazel -path '*/external/com_google_protobuf/BUILD' 2>/dev/null | head -1)
+  if [[ -n "$PROTOBUF_BUILD" ]]; then
+    echo "Path: $PROTOBUF_BUILD"
+    echo "----- First 130 lines (line 119 is the failing genrule) -----"
+    sed -n '1,130p' "$PROTOBUF_BUILD"
+    echo "----- BUILD_PREFIX references in file -----"
+    grep -n "BUILD_PREFIX" "$PROTOBUF_BUILD" || echo "(none)"
+  else
+    echo "Could not find external/com_google_protobuf/BUILD in bazel cache"
+  fi
+  echo "===== DEBUG: bazel info defines (if bazel still alive) ====="
+  ./bazel-7.4.1-linux-x86_64 info --noenable_bzlmod 2>&1 | grep -i "define\|prefix" | head -10 || true
+  exit $BAZEL_BUILD_RC
+fi
 
 # Clean up to speedup postprocessing
 pushd build

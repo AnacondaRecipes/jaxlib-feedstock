@@ -29,9 +29,6 @@ build:
   # Windows: SIR-2621 PBP symlink failures were resolved (closed 2026-02-27);
   # Askat's manual build proved jaxlib succeeds on Windows. Re-enabled here per
   # PKG-13074 ask. Win-64 builds CPU only (cuda_compiler_version: None).
-  # osx-64: libprotobuf-static 6.33.5 is not on pkgs/main for osx-64; system_lib
-  # protobuf strategy from conda-forge requires it. Skip until pkgs/main ships it.
-  skip: true  # [osx and x86_64]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
