@@ -26,10 +26,12 @@ build:
   # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
   skip: true  # [py<311]
   skip: true  # [cuda_compiler_version != "None" and osx]
-  # Windows: temporarily skipped to save PBP resources while iterating on
-  # the linux build. Will re-enable once linux is green. SIR-2621 (PBP win
-  # symlink failures) is resolved upstream so re-enabling is just a recipe edit.
+  # Windows + osx: temporarily skipped to save PBP resources while iterating
+  # on the linux build. Will re-enable once linux is green. SIR-2621 (PBP win
+  # symlink failures) is resolved upstream; osx-arm64 already builds and tests
+  # successfully (proven by graph 8c8f17d5).
   skip: true  # [win]
+  skip: true  # [osx]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 

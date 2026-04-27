@@ -233,8 +233,11 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # applies to the target compile config; host/exec compiles ([for tool] in
 # log) hit the rejection. Workaround: copy the headers into the workspace
 # and pass the include path as a workspace-relative directory.
+# Copy ALL conda headers (google/protobuf, absl, grpc, openssl, ...) into the
+# workspace so bazel accepts the include path. Use rsync to dereference symlinks
+# and avoid copying the (huge) cuda/ subtree which bazel handles separately.
 mkdir -p $SRC_DIR/conda_includes
-cp -rL $PREFIX/include/google $SRC_DIR/conda_includes/
+rsync -aL --exclude='cuda*' $PREFIX/include/ $SRC_DIR/conda_includes/
 EXTRA="${EXTRA} --bazel_options=--copt=-isystemconda_includes"
 EXTRA="${EXTRA} --bazel_options=--host_copt=-isystemconda_includes"
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
