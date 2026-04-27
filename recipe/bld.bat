@@ -31,6 +31,7 @@ set CLANG_COMPILER_PATH=%BUILD_PREFIX:\=/%/Library/bin/clang.exe
 echo build --logging=6 >> .bazelrc.user
 echo build --verbose_failures >> .bazelrc.user
 echo build --toolchain_resolution_debug >> .bazelrc.user
+echo build --define=BUILD_PREFIX=%BUILD_PREFIX:\=/% >> .bazelrc.user
 echo build --define=PREFIX=%PREFIX:\=/% >> .bazelrc.user
 echo build --define=PROTOBUF_INCLUDE_PATH=%PREFIX:\=/%/include >> .bazelrc.user
 echo build --local_resources=cpu=%CPU_COUNT% >> .bazelrc.user

@@ -121,6 +121,7 @@ build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain
 build --logging=6
 build --verbose_failures
 build --toolchain_resolution_debug
+build --define=BUILD_PREFIX=${BUILD_PREFIX}
 build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --define=with_cross_compiler_support=true
