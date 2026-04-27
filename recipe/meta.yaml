@@ -26,8 +26,9 @@ build:
   # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
   skip: true  # [py<311]
   skip: true  # [cuda_compiler_version != "None" and osx]
-  # TODO: re-enable after symlinks on PBP work again. See SIR-2371
-  skip: true  # [win]
+  # Windows: SIR-2621 PBP symlink failures were resolved (closed 2026-02-27);
+  # Askat's manual build proved jaxlib succeeds on Windows. Re-enabled here per
+  # PKG-13074 ask. Win-64 builds CPU only (cuda_compiler_version: None).
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
