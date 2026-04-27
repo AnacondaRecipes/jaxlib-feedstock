@@ -1,6 +1,6 @@
 {% set name = 'jaxlib' %}
-{% set version = "0.7.2" %}
-{% set build = 2 %}
+{% set version = "0.9.2" %}
+{% set build = 0 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -13,16 +13,13 @@ package:
 source:
   # Only pull sources after upstream PyPI release
   url: https://github.com/jax-ml/jax/archive/jax-v{{ version }}.tar.gz
-  sha256: 56d92604f1bb60bb3dbd7dc7c7dc21502d10b3474b8b905ce29ce06db6a26e45
+  sha256: 9e67faaa74be4539e397fe61317568545f9ea325ddf1f7f534929d508786f29e
   patches:
     - patches/0001-Allow-for-custom-CUDA-build.patch
     # XLA unvendoring patches for Linux and macOS
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
-    # Additional XLA unvendoring patches (to be removed in jaxlib 0.8.x)
-    # 'absl_low_level_hash' is removed in abseil 20250814.1
-    - patches/0005-Support-for-abseil-20250814.1.patch  # [unix]
 
 build:
   number: {{ build }}
@@ -94,12 +91,11 @@ requirements:
     # - pybind11 2.13.6                 # [unix]
     # - libcurl {{ libcurl }}           # [unix]
   run:
-    # https://github.com/jax-ml/jax/blob/jax-v0.7.2/setup.py#L63
+    # https://github.com/jax-ml/jax/blob/jax-v{{ version }}/jaxlib/setup.py
     - python
     - scipy >=1.13
     - numpy >=2.0
     - ml_dtypes >=0.5.0
-    - opt_einsum
     {% if cuda_compiler_version != "None" %}
     - __cuda
     - cuda-nvcc-tools
