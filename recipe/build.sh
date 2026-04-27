@@ -91,7 +91,10 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
       ln -s . "${LOCAL_CUDA_PATH}/nvml"
     fi
     export TF_CUDA_VERSION="${cuda_compiler_version}"
-    export TF_CUDNN_VERSION="${cudnn}"
+    # Detect installed cuDNN version from $PREFIX (matches conda-forge approach).
+    # The recipe's CBC no longer pins `cudnn`, so the env var is unset; querying
+    # conda's package list gives the actual major.minor.patch (e.g., 9.17.0).
+    export TF_CUDNN_VERSION=$(conda list -p $PREFIX ^cudnn$ | awk '$1 == "cudnn" {split($2, a, "."); print a[1]"."a[2]"."a[3]}')
     if [[ "${target_platform}" == "linux-aarch64" ]]; then
         export TF_CUDA_PATHS="${CUDA_HOME}/targets/sbsa-linux,${TF_CUDA_PATHS}"
     fi
@@ -122,6 +125,9 @@ build --define=PREFIX=${PREFIX}
 build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
 build --define=with_cross_compiler_support=true
 build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
+# jaxlib 0.9.x XLA's protobuf_impl.bzl requires PROTOBUF_BAZEL_DIR to locate
+# the bazel rules from the protobuf-bazel-rules host package.
+build --repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel
 
 # We need to define a dummy value for this as we delete everything else for build_cuda_with_nvcc
 build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1

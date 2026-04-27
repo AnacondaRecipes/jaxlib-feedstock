@@ -82,6 +82,9 @@ requirements:
     - flatbuffers <2.0.6              # [unix]
     - grpc-bazel-rules {{ libgrpc }}  # [unix]
     - libgrpc {{ libgrpc }}           # [unix]
+    # jaxlib 0.9.x XLA's protobuf_impl.bzl reads protobuf bazel rules from
+    # ${PREFIX}/share/bazel/protobuf/bazel via the PROTOBUF_BAZEL_DIR env var.
+    - protobuf-bazel-rules            # [unix]
     - openssl {{ openssl }}           # [unix]
     - zlib {{ zlib }}                 # [unix]
     # # dependencies for Anaconda XLA unvendoring
