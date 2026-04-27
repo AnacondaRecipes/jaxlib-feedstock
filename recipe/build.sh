@@ -111,32 +111,29 @@ fi
 
 source gen-bazel-toolchain
 
-cat >> .bazelrc <<EOF
+# Use line-by-line echo with unquoted vars so bash expands them at write time.
+# Heredoc + conda-build text-file prefix substitution interacts badly: heredoc
+# writes real paths but conda-build later rewrites them back to literal
+# $BUILD_PREFIX/$PREFIX placeholders, which bazel reads as literals (proven by
+# `bazel info` showing --define=BUILD_PREFIX=\$BUILD_PREFIX). Append per line.
+echo "" >> .bazelrc
+echo "build --crosstool_top=//bazel_toolchain:toolchain" >> .bazelrc
+echo "build --platforms=//bazel_toolchain:target_platform" >> .bazelrc
+echo "build --host_platform=//bazel_toolchain:build_platform" >> .bazelrc
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain" >> .bazelrc
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazelrc
+echo "build --logging=6" >> .bazelrc
+echo "build --verbose_failures" >> .bazelrc
+echo "build --toolchain_resolution_debug" >> .bazelrc
+echo "build --define=with_cross_compiler_support=true" >> .bazelrc
+echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
+echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
+echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc
 
-build --crosstool_top=//bazel_toolchain:toolchain
-build --platforms=//bazel_toolchain:target_platform
-build --host_platform=//bazel_toolchain:build_platform
-build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain
-build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain
-build --logging=6
-build --verbose_failures
-build --toolchain_resolution_debug
-build --define=BUILD_PREFIX=${BUILD_PREFIX}
-build --define=PREFIX=${PREFIX}
-build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
-build --define=with_cross_compiler_support=true
-build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
-# jaxlib 0.9.x XLA's protobuf_impl.bzl requires PROTOBUF_BAZEL_DIR to locate
-# the bazel rules from the protobuf-bazel-rules host package.
-build --repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel
-# XLA's nvtx_utils may be missing a <string> include depending on the pinned
-# XLA commit. Defensive per-file include. (vkhomits, jaxlib-feedstock#25)
-build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
-build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
-
-# We need to define a dummy value for this as we delete everything else for build_cuda_with_nvcc
-build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1
-EOF
+# IMPORTANT: defines and repo_envs that contain $PREFIX or $BUILD_PREFIX paths
+# go directly on the bazel command line (via build/build.py --bazel_options),
+# NOT into .bazelrc. conda-build's text-file prefix substitution clobbers those
+# paths in .bazelrc; passing them via the command line bypasses that.
 
 # Use a fixed number instead of CPU_COUNT on linux-aarch64
 if [[ "${target_platform}" == "linux-aarch64" ]]; then
@@ -204,8 +201,18 @@ if [[ "${target_platform}" == "osx-64" ]]; then
     export TF_SYSTEM_LIBS="${TF_SYSTEM_LIBS},onednn"
 fi
 
-# Mark as a release build
-EXTRA="--bazel_options=--repo_env=ML_WHEEL_TYPE=release ${CUDA_ARGS:-}"
+# Mark as a release build.
+# Pass paths-with-prefix via --bazel_options (build.py argv) instead of
+# .bazelrc — otherwise conda-build's prefix substitution on text files
+# replaces the real path with the literal "$BUILD_PREFIX" / "$PREFIX"
+# placeholder and bazel reads them as undefined make-variables.
+EXTRA="--bazel_options=--repo_env=ML_WHEEL_TYPE=release"
+EXTRA="${EXTRA} --bazel_options=--define=BUILD_PREFIX=${BUILD_PREFIX}"
+EXTRA="${EXTRA} --bazel_options=--define=PREFIX=${PREFIX}"
+EXTRA="${EXTRA} --bazel_options=--define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include"
+EXTRA="${EXTRA} --bazel_options=--repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel"
+EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel"
+EXTRA="${EXTRA} ${CUDA_ARGS:-}"
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
     EXTRA="${EXTRA} --target_cpu ${TARGET_CPU}"
