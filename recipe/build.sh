@@ -296,8 +296,12 @@ if [[ "${target_platform}" == linux-* ]]; then
     sed -i '/Qunused-arguments/d' .bazelrc
     # Don't override our toolchain for CUDA
     sed -i '/TF_NVCC_CLANG/{N;d}' .bazelrc
-    # Keep using our toolchain
-    sed -i '/--crosstool_top=@local_config_cuda/d' .bazelrc
+    # Keep using our toolchain. Upstream's cuda_clang_local config sets
+    # crosstool_top to @local_config_cuda; rewrite (don't delete) to our
+    # //bazel_toolchain:toolchain so the config still applies but selects
+    # the right cc_toolchain — without this, bazel falls back to the
+    # autodetected toolchain which doesn't have our -isystem $PREFIX/include.
+    sed -i 's|@local_config_cuda//crosstool:toolchain|//bazel_toolchain:toolchain|g' .bazelrc
 fi
 
 # ------------- DEBUG OUTPUT (PKG-10582) -------------
