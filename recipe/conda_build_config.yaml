@@ -5,9 +5,9 @@ cxx_compiler:
   - clangxx  # [unix]
   - clang  # [win]
 c_compiler_version:
-  - '20'
+  - '21'
 cxx_compiler_version:
-  - '20'
+  - '21'
 
 # Check JAX OS support for CUDA: https://docs.jax.dev/en/latest/installation.html#supported-platforms
 #  * jaxlib 0.9.x supports CUDA 12.x and 13.x on Linux x86_64 and aarch64
