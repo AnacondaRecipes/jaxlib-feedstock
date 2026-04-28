@@ -33,7 +33,12 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
     if [[ ${cuda_compiler_version} == 12* ]]; then
         export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_60,sm_70,sm_75,sm_80,sm_86,sm_89,sm_90,sm_100,sm_120,compute_120
     else
-        export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_75,sm_80,sm_86,sm_89,sm_90,sm_100,sm_110,sm_120,compute_120
+        # CUDA 13.x. clang 20 (latest clang_linux-64 activation on pkgs/main)
+        # doesn't recognize sm_110 / sm_120; clang 21+ would but the
+        # clang_linux-64 activation wrapper hasn't been rebuilt for 21/22 yet.
+        # Drop sm_110, sm_120, compute_120 — sm_100 (Hopper SXM) is the
+        # newest arch clang 20 supports for CUDA 13.x.
+        export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_75,sm_80,sm_86,sm_89,sm_90,sm_100
     fi
     if [[ "${target_platform}" == "linux-64" ]]; then
         export CUDA_ARCH="x86_64-linux"
