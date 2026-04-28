@@ -225,6 +225,15 @@ EXTRA="${EXTRA} --bazel_options=--define=PREFIX=${PREFIX}"
 EXTRA="${EXTRA} --bazel_options=--define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include"
 EXTRA="${EXTRA} --bazel_options=--repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel"
 EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel"
+# Bazel's auto-detected local cc toolchain (used for [for tool] actions and
+# compiles bazel selects local_execution_config_platform for) reads compile
+# flags from BAZEL_CXXOPTS / BAZEL_LINKOPTS as colon-separated lists.
+# Our cc_toolchain_config.bzl sed-fix only applies to the cc_cf_toolchain
+# we registered, but bazel often picks the autodetected one regardless.
+# Pass -isystem $PREFIX/include + $BUILD_PREFIX/include via --repo_env so
+# the autodetected toolchain finds protobuf/absl/grpc headers.
+EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++17"
+EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
 # protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
 # (and friends). Those headers ship with libprotobuf at $PREFIX/include/.
 # Bazel rejects user-supplied -I/-isystem to absolute paths outside the
