@@ -256,13 +256,17 @@ for f in bazel_toolchain/cc_toolchain_config.bzl \
     sed -i 's|[$]PREFIX|'"$PREFIX"'|g' "$f"
   fi
 done
-echo "===== DEBUG: PREFIX/include after expansion (all 3 files) ====="
+echo "===== DEBUG: bzl content via od to see raw bytes (literal vs expanded \$) ====="
+# Use od -c on lines with $BUILD_PREFIX to see if it's a literal $ or
+# whether conda-build's log post-processing is just rendering the real path
+# back as the placeholder. Real path bytes start with '/home/...'.
 for f in bazel_toolchain/cc_toolchain_config.bzl \
-         bazel_toolchain/cc_toolchain_build_config.bzl \
-         bazel_toolchain/crosstool_wrapper_driver_is_not_gcc; do
+         bazel_toolchain/cc_toolchain_build_config.bzl; do
   if [[ -f "$f" ]]; then
-    echo "--- $f ---"
-    grep -nE "PREFIX/include|cxx_builtin_include_directories" "$f" 2>&1 | head -5 || true
+    echo "--- $f line 322 raw bytes ---"
+    sed -n '322p' "$f" | od -c | head -3
+    echo "--- $f grep for literal-dollar-PREFIX ---"
+    LC_ALL=C grep -nE '[\$]PREFIX|[\$]BUILD_PREFIX' "$f" | head -5 || echo "(none — sed worked)"
   fi
 done
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
