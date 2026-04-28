@@ -247,9 +247,13 @@ for f in bazel_toolchain/cc_toolchain_config.bzl \
          bazel_toolchain/cc_toolchain_build_config.bzl \
          bazel_toolchain/crosstool_wrapper_driver_is_not_gcc; do
   if [[ -f "$f" ]]; then
-    sed -i "s|\\\$PREFIX|$PREFIX|g" "$f"
-    sed -i "s|\\\$BUILD_PREFIX|$BUILD_PREFIX|g" "$f"
-    sed -i "s|\\\$SRC_DIR|$SRC_DIR|g" "$f"
+    # Use [$] character class for unambiguous literal $ match.
+    # GNU sed's handling of \$ mid-pattern is implementation-dependent.
+    # Order matters: replace longer var names first so $BUILD_PREFIX isn't
+    # matched as $BU... by a $-prefix-only pattern.
+    sed -i 's|[$]BUILD_PREFIX|'"$BUILD_PREFIX"'|g' "$f"
+    sed -i 's|[$]SRC_DIR|'"$SRC_DIR"'|g' "$f"
+    sed -i 's|[$]PREFIX|'"$PREFIX"'|g' "$f"
   fi
 done
 echo "===== DEBUG: PREFIX/include after expansion (all 3 files) ====="
