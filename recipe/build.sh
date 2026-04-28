@@ -33,7 +33,30 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
     if [[ ${cuda_compiler_version} == 12* ]]; then
         export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_60,sm_70,sm_75,sm_80,sm_86,sm_89,sm_90,sm_100,sm_120,compute_120
     else
-        export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_75,sm_80,sm_86,sm_89,sm_90,sm_100,sm_110,sm_120,compute_120
+        # CUDA 13.x: clang 22 supports the full Blackwell range.
+        export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_75,sm_80,sm_86,sm_89,sm_90,sm_100,sm_120,compute_120
+    fi
+
+    # jax 0.9.2's pinned XLA pulls rules_ml_toolchain commit cae0cbf, whose
+    # PTX_VERSION_DICT["clang"] only goes up to "21". Building with clang 22
+    # then fails at bazel analysis time:
+    #   "Cuda Configuration Error: The supported Clang versions are
+    #    [...,"21"]. Please add max PTX version supported by Clang major
+    #    version=22."
+    # Bumping rules_ml_toolchain wholesale to a commit that has clang 22
+    # would drag in ~2 months of unrelated changes; instead we materialize
+    # the pinned commit locally, inject the clang 22 entry, and pass the
+    # local copy via bazel's --override_repository (argv-only — bypasses
+    # conda-build's text-file prefix substitution).
+    RML_DIR="$SRC_DIR/_rules_ml_toolchain_local"
+    if [[ ! -d "$RML_DIR" ]]; then
+        mkdir -p "$RML_DIR"
+        curl -sL https://github.com/google-ml-infra/rules_ml_toolchain/archive/cae0cbffdc37d6570c974f6c53f447eba60af2b3.tar.gz \
+            | tar -xz -C "$RML_DIR" --strip-components=1
+        sed -i 's|"21": "8.8",|"21": "8.8",\n        "22": "9.0",|' \
+            "$RML_DIR/gpu/cuda/cuda_redist_versions.bzl"
+        echo "===== DEBUG: patched cuda_redist_versions.bzl PTX_VERSION_DICT ====="
+        grep -A 12 "PTX_VERSION_DICT = {" "$RML_DIR/gpu/cuda/cuda_redist_versions.bzl" | head -14
     fi
     if [[ "${target_platform}" == "linux-64" ]]; then
         export CUDA_ARCH="x86_64-linux"
@@ -61,6 +84,21 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
     cp ${PREFIX}/include/cudnn*.h ${BUILD_PREFIX}/targets/${CUDA_ARCH}/include/third_party/gpus/cudnn/
     mkdir -p ${BUILD_PREFIX}/targets/${CUDA_ARCH}/include/third_party/nccl
     cp ${PREFIX}/include/nccl*.h ${BUILD_PREFIX}/targets/${CUDA_ARCH}/include/third_party/nccl/
+    # Work around clang CUDA host compilation colliding with libstdc++'s
+    # __attribute__((__noinline__)) usage via host_defines.h macro expansion.
+    # Patch both build and host CUDA include trees used by this build.
+    for CUDA_INCLUDE_ROOT in "${BUILD_PREFIX}/targets/${CUDA_ARCH}/include" "${PREFIX}/targets/${CUDA_ARCH}/include"; do
+      while IFS= read -r CUDA_HOST_DEFINES; do
+        sed -i 's/#if defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)/#if (defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)) \&\& !defined(__clang__)/' "${CUDA_HOST_DEFINES}"
+        sed -i 's/#if (defined(__CUDACC__) \&\& !defined(__clang__)) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)/#if (defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)) \&\& !defined(__clang__)/' "${CUDA_HOST_DEFINES}"
+      done < <(find "${CUDA_INCLUDE_ROOT}" -path '*/crt/host_defines.h' -print)
+
+      # Work around clang + CUDA 12 CUB placement-new resolution in device code.
+      while IFS= read -r CUDA_CUB_BLOCK_LOAD; do
+        sed -i 's|new (\&dst_items\[i\]) T(block_src_it\[warp_offset + tid + (i \* CUB_PTX_WARP_THREADS)\]);|detail::uninitialized_copy_single(\&dst_items[i], block_src_it[warp_offset + tid + (i * CUB_PTX_WARP_THREADS)]);|' "${CUDA_CUB_BLOCK_LOAD}"
+        sed -i 's|new (\&dst_items\[i\]) T(block_src_it\[src_pos\]);|detail::uninitialized_copy_single(\&dst_items[i], block_src_it[src_pos]);|' "${CUDA_CUB_BLOCK_LOAD}"
+      done < <(find "${CUDA_INCLUDE_ROOT}" -path '*/cub/block/block_load.cuh' -print)
+    done
     export LOCAL_CUDA_PATH="${BUILD_PREFIX}/targets/${CUDA_ARCH}"
     export LOCAL_CUDNN_PATH="${PREFIX}/targets/${CUDA_ARCH}"
     export LOCAL_NCCL_PATH="${PREFIX}/targets/${CUDA_ARCH}"
@@ -69,8 +107,17 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
     test -f ${BUILD_PREFIX}/targets/${CUDA_ARCH}/bin/nvlink || ln -s $(which nvlink) ${BUILD_PREFIX}/targets/${CUDA_ARCH}/bin/nvlink
     test -f ${BUILD_PREFIX}/targets/${CUDA_ARCH}/bin/fatbinary || ln -s $(which fatbinary) ${BUILD_PREFIX}/targets/${CUDA_ARCH}/bin/fatbinary
 
+    # rules_ml_toolchain expects an nvml redist directory for local CUDA builds.
+    # Conda packages only provide the NVML stub library, so expose the target root
+    # under the expected name to satisfy the repository rule on clean builds.
+    if [[ ! -e "${LOCAL_CUDA_PATH}/nvml" ]]; then
+      ln -s . "${LOCAL_CUDA_PATH}/nvml"
+    fi
     export TF_CUDA_VERSION="${cuda_compiler_version}"
-    export TF_CUDNN_VERSION="${cudnn}"
+    # Detect installed cuDNN version from $PREFIX (matches conda-forge approach).
+    # The recipe's CBC no longer pins `cudnn`, so the env var is unset; querying
+    # conda's package list gives the actual major.minor.patch (e.g., 9.17.0).
+    export TF_CUDNN_VERSION=$(conda list -p $PREFIX ^cudnn$ | awk '$1 == "cudnn" {split($2, a, "."); print a[1]"."a[2]"."a[3]}')
     if [[ "${target_platform}" == "linux-aarch64" ]]; then
         export TF_CUDA_PATHS="${CUDA_HOME}/targets/sbsa-linux,${TF_CUDA_PATHS}"
     fi
@@ -87,39 +134,52 @@ fi
 
 source gen-bazel-toolchain
 
-cat >> .bazelrc.user <<EOF
+# pkgs/main's bazel-toolchain 0.4.1 doesn't declare the conda_target_platform /
+# conda_build_platform constraints that conda-forge's >=0.5.8 emits.
+# Our patched XLA protobuf BUILD references @//bazel_toolchain:conda_target_platform
+# in a config_setting select(). Append the missing constraints so bazel can parse
+# them; since we don't cross-compile here (build_platform == target_platform),
+# the select() correctly falls through to the BUILD_PREFIX branch by default.
+cat >> bazel_toolchain/BUILD <<'BAZEL_EOF'
 
-build --crosstool_top=//bazel_toolchain:toolchain
-build --platforms=//bazel_toolchain:target_platform
-build --host_platform=//bazel_toolchain:build_platform
-build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain
-build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain
-build --logging=6
-build --verbose_failures
-build --toolchain_resolution_debug
-build --define=PREFIX=${PREFIX}
-build --define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include
-build --define=with_cross_compiler_support=true
-build --repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel
-# Fix memchr not declared in re2 with newer gcc
-build --per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
-build --host_per_file_copt=external/com_googlesource_code_re2/.*@-include,cstring
-build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
-build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string
+constraint_setting(name = "conda_platform")
+constraint_value(name = "conda_target_platform", constraint_setting = ":conda_platform")
+constraint_value(name = "conda_build_platform", constraint_setting = ":conda_platform")
+BAZEL_EOF
 
-# We need to define a dummy value for this as we delete everything else for build_cuda_with_nvcc
-build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1
-EOF
+# Use line-by-line echo with unquoted vars so bash expands them at write time.
+# Heredoc + conda-build text-file prefix substitution interacts badly: heredoc
+# writes real paths but conda-build later rewrites them back to literal
+# $BUILD_PREFIX/$PREFIX placeholders, which bazel reads as literals (proven by
+# `bazel info` showing --define=BUILD_PREFIX=\$BUILD_PREFIX). Append per line.
+echo "" >> .bazelrc
+echo "build --crosstool_top=//bazel_toolchain:toolchain" >> .bazelrc
+echo "build --platforms=//bazel_toolchain:target_platform" >> .bazelrc
+echo "build --host_platform=//bazel_toolchain:build_platform" >> .bazelrc
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain" >> .bazelrc
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazelrc
+echo "build --logging=6" >> .bazelrc
+echo "build --verbose_failures" >> .bazelrc
+echo "build --toolchain_resolution_debug" >> .bazelrc
+echo "build --define=with_cross_compiler_support=true" >> .bazelrc
+echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
+echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
+echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc
+
+# IMPORTANT: defines and repo_envs that contain $PREFIX or $BUILD_PREFIX paths
+# go directly on the bazel command line (via build/build.py --bazel_options),
+# NOT into .bazelrc. conda-build's text-file prefix substitution clobbers those
+# paths in .bazelrc; passing them via the command line bypasses that.
 
 # Use a fixed number instead of CPU_COUNT on linux-aarch64
 if [[ "${target_platform}" == "linux-aarch64" ]]; then
-  echo "build --local_resources=cpu=8" >> .bazelrc.user
+  echo "build --local_resources=cpu=8" >> .bazelrc
 else
-  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc.user
+  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc
 fi
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
-  echo "build --cpu=${TARGET_CPU}" >> .bazelrc.user
+  echo "build --cpu=${TARGET_CPU}" >> .bazelrc
 fi
 
 # For debugging
@@ -127,13 +187,17 @@ fi
 
 # Force static linkage with protobuf to avoid definition collisions,
 # see https://github.com/conda-forge/jaxlib-feedstock/issues/89
-#
-# Thus: don't add com_google_protobuf here.
+# We have modified the system_lib BUILD here to link to libprotobuf.a from
+# the libprotobuf-static host package; com_google_protobuf MUST be in
+# TF_SYSTEM_LIBS so bazel uses the patched system_lib BUILD (which references
+# $(BUILD_PREFIX)/lib/libprotobuf.a) instead of the vendored protobuf source.
 export TF_SYSTEM_LIBS="
   boringssl,
   com_github_googlecloudplatform_google_cloud_cpp,
   com_github_grpc_grpc,
   com_google_absl,
+  com_googlesource_code_re2,
+  com_google_protobuf,
   flatbuffers,
   zlib
 "
@@ -173,8 +237,77 @@ if [[ "${target_platform}" == "osx-64" ]]; then
     export TF_SYSTEM_LIBS="${TF_SYSTEM_LIBS},onednn"
 fi
 
-# Mark as a release build
-EXTRA="--bazel_options=--repo_env=ML_WHEEL_TYPE=release ${CUDA_ARGS:-}"
+# Mark as a release build.
+# Pass paths-with-prefix via --bazel_options (build.py argv) instead of
+# .bazelrc — otherwise conda-build's prefix substitution on text files
+# replaces the real path with the literal "$BUILD_PREFIX" / "$PREFIX"
+# placeholder and bazel reads them as undefined make-variables.
+EXTRA="--bazel_options=--repo_env=ML_WHEEL_TYPE=release"
+EXTRA="${EXTRA} --bazel_options=--define=BUILD_PREFIX=${BUILD_PREFIX}"
+EXTRA="${EXTRA} --bazel_options=--define=PREFIX=${PREFIX}"
+EXTRA="${EXTRA} --bazel_options=--define=PROTOBUF_INCLUDE_PATH=${PREFIX}/include"
+EXTRA="${EXTRA} --bazel_options=--repo_env=GRPC_BAZEL_DIR=${PREFIX}/share/bazel/grpc/bazel"
+EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/bazel/protobuf/bazel"
+# Bazel's auto-detected local cc toolchain (used for [for tool] actions and
+# compiles bazel selects local_execution_config_platform for) reads compile
+# flags from BAZEL_CXXOPTS / BAZEL_LINKOPTS as colon-separated lists.
+# Our cc_toolchain_config.bzl sed-fix only applies to the cc_cf_toolchain
+# we registered, but bazel often picks the autodetected one regardless.
+# Pass -isystem $PREFIX/include + $BUILD_PREFIX/include via --repo_env so
+# the autodetected toolchain finds protobuf/absl/grpc headers.
+EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++17"
+EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
+# protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
+# (and friends). Those headers ship with libprotobuf at $PREFIX/include/.
+# Bazel rejects user-supplied -I/-isystem to absolute paths outside the
+# workspace ("references a path outside of the execution root"). The
+# cc_toolchain CXXFLAGS sed-replace uses -isystem $PREFIX/include but only
+# applies to the target compile config; host/exec compiles ([for tool] in
+# log) hit the rejection. Workaround: copy the headers into the workspace
+# and pass the include path as a workspace-relative directory.
+# bazel-toolchain 0.4.1 (pkgs/main) ships cc_toolchain_*.bzl templates with a
+# mix of ${PREFIX} and bare $PREFIX placeholders. gen-bazel-toolchain only
+# expands the ${...} form, leaving bare $PREFIX/$BUILD_PREFIX/$SRC_DIR as
+# literal strings. Bazel then treats them as literal directory names, which
+# causes "fatal error: '<header>' file not found" during host/exec compiles
+# even though the headers are present at $PREFIX/include/.
+# (Conda-forge ships bazel-toolchain >=0.5.8 on their channel which uses the
+# ${...} form consistently — this is a pkgs/main-only blind spot.)
+# Fix: sed-expand bare $PREFIX/$BUILD_PREFIX/$SRC_DIR in ALL three files
+# gen-bazel-toolchain processes (target config, host config, wrapper).
+for f in bazel_toolchain/cc_toolchain_config.bzl \
+         bazel_toolchain/cc_toolchain_build_config.bzl \
+         bazel_toolchain/crosstool_wrapper_driver_is_not_gcc; do
+  if [[ -f "$f" ]]; then
+    # Use [$] character class for unambiguous literal $ match.
+    # GNU sed's handling of \$ mid-pattern is implementation-dependent.
+    # Order matters: replace longer var names first so $BUILD_PREFIX isn't
+    # matched as $BU... by a $-prefix-only pattern.
+    sed -i 's|[$]BUILD_PREFIX|'"$BUILD_PREFIX"'|g' "$f"
+    sed -i 's|[$]SRC_DIR|'"$SRC_DIR"'|g' "$f"
+    sed -i 's|[$]PREFIX|'"$PREFIX"'|g' "$f"
+  fi
+done
+echo "===== DEBUG: bzl content via od to see raw bytes (literal vs expanded \$) ====="
+# Use od -c on lines with $BUILD_PREFIX to see if it's a literal $ or
+# whether conda-build's log post-processing is just rendering the real path
+# back as the placeholder. Real path bytes start with '/home/...'.
+for f in bazel_toolchain/cc_toolchain_config.bzl \
+         bazel_toolchain/cc_toolchain_build_config.bzl; do
+  if [[ -f "$f" ]]; then
+    echo "--- $f line 322 raw bytes ---"
+    sed -n '322p' "$f" | od -c | head -3
+    echo "--- $f grep for literal-dollar-PREFIX ---"
+    LC_ALL=C grep -nE '[\$]PREFIX|[\$]BUILD_PREFIX' "$f" | head -5 || echo "(none — sed worked)"
+  fi
+done
+EXTRA="${EXTRA} ${CUDA_ARGS:-}"
+
+# Point bazel at our patched local rules_ml_toolchain (see comment near
+# RML_DIR above). Argv-only — do not put this in .bazelrc.
+if [[ -n "${RML_DIR:-}" && -d "${RML_DIR}" ]]; then
+    EXTRA="${EXTRA} --bazel_options=--override_repository=rules_ml_toolchain=${RML_DIR}"
+fi
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
     EXTRA="${EXTRA} --target_cpu ${TARGET_CPU}"
@@ -184,20 +317,61 @@ fi
 sed -i '/local_config_apple/d' .bazelrc
 if [[ "${target_platform}" == linux-* ]]; then
     EXTRA="${EXTRA} --clang_path $CC"
+    # Defensive: enable glibc extensions for transitively-vendored deps that
+    # rely on them (e.g., pthread_setname_np, etc.). (vkhomits, jaxlib-feedstock#25)
     EXTRA="${EXTRA} --bazel_options=--copt=-D_GNU_SOURCE"
 
     # Remove incompatible argument from bazelrc
     sed -i '/Qunused-arguments/d' .bazelrc
     # Don't override our toolchain for CUDA
     sed -i '/TF_NVCC_CLANG/{N;d}' .bazelrc
-    # Keep using our toolchain
-    sed -i '/--crosstool_top=@local_config_cuda/d' .bazelrc
+    # Keep using our toolchain. Upstream's cuda_clang_local config sets
+    # crosstool_top to @local_config_cuda; rewrite (don't delete) to our
+    # //bazel_toolchain:toolchain so the config still applies but selects
+    # the right cc_toolchain — without this, bazel falls back to the
+    # autodetected toolchain which doesn't have our -isystem $PREFIX/include.
+    sed -i 's|@local_config_cuda//crosstool:toolchain|//bazel_toolchain:toolchain|g' .bazelrc
 fi
+
+# ------------- DEBUG OUTPUT (PKG-10582) -------------
+echo "===== DEBUG: env before bazel build ====="
+echo "BUILD_PREFIX=$BUILD_PREFIX"
+echo "PREFIX=$PREFIX"
+echo "TF_SYSTEM_LIBS=$TF_SYSTEM_LIBS"
+echo "PROTOBUF_BAZEL_DIR=${PROTOBUF_BAZEL_DIR:-<unset>}"
+echo "GRPC_BAZEL_DIR=${GRPC_BAZEL_DIR:-<unset>}"
+echo "===== DEBUG: ls libprotobuf-static .a files in BUILD_PREFIX/lib ====="
+ls -la "$BUILD_PREFIX/lib/" 2>&1 | grep -E "libprotobuf|libutf8|libprotoc" | head -10 || true
+echo "===== DEBUG: ls libprotobuf-static .a files in PREFIX/lib ====="
+ls -la "$PREFIX/lib/" 2>&1 | grep -E "libprotobuf|libutf8|libprotoc" | head -10 || true
+echo "===== DEBUG: protobuf-bazel-rules layout ====="
+ls -la "$PREFIX/share/bazel/protobuf/bazel/" 2>&1 | head -10 || true
+echo "===== DEBUG: tail of .bazelrc ====="
+tail -40 .bazelrc 2>&1
+echo "===== DEBUG: end ====="
 
 ${PYTHON} build/build.py build \
     --target_cpu_features default \
     --python_version $PY_VER \
-    ${EXTRA}
+    ${EXTRA} || BAZEL_BUILD_RC=$?
+
+# If bazel build failed, dump the offending BUILD file so we can see what's at line 119.
+if [[ -n "${BAZEL_BUILD_RC:-}" ]]; then
+  echo "===== DEBUG: bazel build failed (rc=$BAZEL_BUILD_RC); dumping protobuf BUILD ====="
+  PROTOBUF_BUILD=$(find ~/.cache/bazel -path '*/external/com_google_protobuf/BUILD' 2>/dev/null | head -1)
+  if [[ -n "$PROTOBUF_BUILD" ]]; then
+    echo "Path: $PROTOBUF_BUILD"
+    echo "----- First 130 lines (line 119 is the failing genrule) -----"
+    sed -n '1,130p' "$PROTOBUF_BUILD"
+    echo "----- BUILD_PREFIX references in file -----"
+    grep -n "BUILD_PREFIX" "$PROTOBUF_BUILD" || echo "(none)"
+  else
+    echo "Could not find external/com_google_protobuf/BUILD in bazel cache"
+  fi
+  echo "===== DEBUG: bazel info defines (if bazel still alive) ====="
+  ./bazel-7.4.1-linux-x86_64 info --noenable_bzlmod 2>&1 | grep -i "define\|prefix" | head -10 || true
+  exit $BAZEL_BUILD_RC
+fi
 
 # Clean up to speedup postprocessing
 pushd build

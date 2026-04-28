@@ -1,6 +1,6 @@
 {% set name = 'jaxlib' %}
-{% set version = "0.7.2" %}
-{% set build = 4 %}
+{% set version = "0.9.2" %}
+{% set build = 0 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -13,22 +13,25 @@ package:
 source:
   # Only pull sources after upstream PyPI release
   url: https://github.com/jax-ml/jax/archive/jax-v{{ version }}.tar.gz
-  sha256: 56d92604f1bb60bb3dbd7dc7c7dc21502d10b3474b8b905ce29ce06db6a26e45
+  sha256: 9e67faaa74be4539e397fe61317568545f9ea325ddf1f7f534929d508786f29e
   patches:
     - patches/0001-Allow-for-custom-CUDA-build.patch
     # XLA unvendoring patches for Linux and macOS
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
-    # Additional XLA unvendoring patches (to be removed in jaxlib 0.8.x)
-    # 'absl_low_level_hash' is removed in abseil 20250814.1
-    - patches/0005-Support-for-abseil-20250814.1.patch  # [unix]
 
 build:
   number: {{ build }}
   # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
   skip: true  # [py<311]
   skip: true  # [cuda_compiler_version != "None" and osx]
+  # Windows + osx: temporarily skipped to save PBP resources while iterating
+  # on the linux build. Will re-enable once linux is green. SIR-2621 (PBP win
+  # symlink failures) is resolved upstream; osx-arm64 already builds and tests
+  # successfully (proven by graph 8c8f17d5).
+  skip: true  # [win]
+  skip: true  # [osx]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
 
@@ -45,13 +48,17 @@ requirements:
     - rsync                           # [cuda_compiler_version != "None"]
     - unzip                           # [unix]
     - bazel 7.*
+    # pkgs/main maxes out at 0.4.1; conda-forge has >=0.5.8 but they're on
+    # a different channel. 0.4.1 is what 0.7.2 shipped with.
     - bazel-toolchain >=0.4.1         # [unix]
     # need protoc
     - libprotobuf                     # [unix]
+    # XLA system_lib BUILD links against $(BUILD_PREFIX)/lib/libprotobuf.a
+    - libprotobuf-static              # [unix]
     # needs protoc-gen-grpc
     - libgrpc                         # [unix]
     # needs flatc
-    - flatbuffers <2.0.6              # [unix]
+    - flatbuffers                     # [unix]
     # list libabseil here to ensure pinning correctly
     - libabseil                       # [unix]
     - sed                             # [unix]
@@ -79,25 +86,23 @@ requirements:
     - python-build
     # list libabseil here to ensure pinning correctly
     - libabseil {{ libabseil }}       # [unix]
-    - flatbuffers <2.0.6              # [unix]
+    - libprotobuf-static              # [unix]
+    - flatbuffers                     # [unix]
     - grpc-bazel-rules {{ libgrpc }}  # [unix]
     - libgrpc {{ libgrpc }}           # [unix]
+    # jaxlib 0.9.x XLA's protobuf_impl.bzl reads protobuf bazel rules from
+    # ${PREFIX}/share/bazel/protobuf/bazel via the PROTOBUF_BAZEL_DIR env var.
+    - protobuf-bazel-rules            # [unix]
+    # XLA's system_lib BUILD for re2 (added by patch 0002) expects re2 in host
+    - re2                             # [unix]
     - openssl {{ openssl }}           # [unix]
     - zlib {{ zlib }}                 # [unix]
-    # # dependencies for Anaconda XLA unvendoring
-    # - nsync 1.24.0                    # [unix]
-    # - snappy 1.2.1                    # [unix]
-    # - double-conversion 3.1.5         # [unix]
-    # - jsoncpp {{ jsoncpp }}           # [unix]
-    # - pybind11 2.13.6                 # [unix]
-    # - libcurl {{ libcurl }}           # [unix]
   run:
-    # https://github.com/jax-ml/jax/blob/jax-v0.7.2/setup.py#L63
+    # https://github.com/jax-ml/jax/blob/jax-v{{ version }}/jaxlib/setup.py
     - python
     - scipy >=1.13
     - numpy >=2.0
     - ml_dtypes >=0.5.0
-    - opt_einsum
     {% if cuda_compiler_version != "None" %}
     - __cuda
     - cuda-nvcc-tools
