@@ -233,18 +233,34 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # applies to the target compile config; host/exec compiles ([for tool] in
 # log) hit the rejection. Workaround: copy the headers into the workspace
 # and pass the include path as a workspace-relative directory.
-# cc_toolchain_config.bzl already lists $PREFIX/include in
-# cxx_builtin_include_directories, but as the LITERAL string "$PREFIX/include"
-# (bare, not ${PREFIX}). gen-bazel-toolchain's sed handles ${...} form only,
-# leaving bare $PREFIX unexpanded. Bazel then looks for a directory literally
-# named "$PREFIX/include" and fails to find any system headers, causing
-# "fatal error: 'absl/...' file not found" during host/exec compiles.
-# Fix: explicitly sed bare $PREFIX and $BUILD_PREFIX in the bzl file.
-sed -i "s|\\\$PREFIX|$PREFIX|g" bazel_toolchain/cc_toolchain_config.bzl
-sed -i "s|\\\$BUILD_PREFIX|$BUILD_PREFIX|g" bazel_toolchain/cc_toolchain_config.bzl
-sed -i "s|\\\$SRC_DIR|$SRC_DIR|g" bazel_toolchain/cc_toolchain_config.bzl
-echo "===== DEBUG: cxx_builtin_include_directories after expansion ====="
-grep -nE "PREFIX/include|cxx_builtin_include_directories" bazel_toolchain/cc_toolchain_config.bzl 2>&1 | head -10 || true
+# bazel-toolchain 0.4.1 (pkgs/main) ships cc_toolchain_*.bzl templates with a
+# mix of ${PREFIX} and bare $PREFIX placeholders. gen-bazel-toolchain only
+# expands the ${...} form, leaving bare $PREFIX/$BUILD_PREFIX/$SRC_DIR as
+# literal strings. Bazel then treats them as literal directory names, which
+# causes "fatal error: '<header>' file not found" during host/exec compiles
+# even though the headers are present at $PREFIX/include/.
+# (Conda-forge ships bazel-toolchain >=0.5.8 on their channel which uses the
+# ${...} form consistently — this is a pkgs/main-only blind spot.)
+# Fix: sed-expand bare $PREFIX/$BUILD_PREFIX/$SRC_DIR in ALL three files
+# gen-bazel-toolchain processes (target config, host config, wrapper).
+for f in bazel_toolchain/cc_toolchain_config.bzl \
+         bazel_toolchain/cc_toolchain_build_config.bzl \
+         bazel_toolchain/crosstool_wrapper_driver_is_not_gcc; do
+  if [[ -f "$f" ]]; then
+    sed -i "s|\\\$PREFIX|$PREFIX|g" "$f"
+    sed -i "s|\\\$BUILD_PREFIX|$BUILD_PREFIX|g" "$f"
+    sed -i "s|\\\$SRC_DIR|$SRC_DIR|g" "$f"
+  fi
+done
+echo "===== DEBUG: PREFIX/include after expansion (all 3 files) ====="
+for f in bazel_toolchain/cc_toolchain_config.bzl \
+         bazel_toolchain/cc_toolchain_build_config.bzl \
+         bazel_toolchain/crosstool_wrapper_driver_is_not_gcc; do
+  if [[ -f "$f" ]]; then
+    echo "--- $f ---"
+    grep -nE "PREFIX/include|cxx_builtin_include_directories" "$f" 2>&1 | head -5 || true
+  fi
+done
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
