@@ -6,18 +6,35 @@
 @echo on
 setlocal EnableDelayedExpansion
 
-:: if JAX_RELEASE or JAXLIB_RELEASE are set: version looks like "0.7.2"
-:: if JAX_NIGHTLY or JAXLIB_NIGHTLY are set: version looks like "0.7.2.devX"
-:: if none are set: version looks like "0.7.2.devX+Y" or "0.7.2.dev0+selfbuilt"
+REM ----- Workaround for bazel runfiles path mismatch on Windows -----
+REM PBP Windows workers create the build dir under a long username path
+REM (e.g. C:\Users\task_177756257755088\...). bazel's default output
+REM base lands under that long path, while the py_binary launcher
+REM extracts runfiles to a separate temp dir. runfiles.py then does a
+REM literal-string prefix check between __file__ and runfiles_root and
+REM the two paths share no common ancestor.
+REM
+REM Force bazel's output_user_root and the runfiles temp dir under the
+REM same short root we control so both sides resolve under C:\bzl*.
+set BZLTMP=C:\bzltmp
+if not exist "%BZLTMP%" mkdir "%BZLTMP%"
+set TMP=%BZLTMP%
+set TEMP=%BZLTMP%
+set LOCALAPPDATA=%BZLTMP%
+if not exist "C:\bzlroot" mkdir "C:\bzlroot"
+
+:: if JAX_RELEASE or JAXLIB_RELEASE are set: version looks like "0.9.2"
+:: if JAX_NIGHTLY or JAXLIB_NIGHTLY are set: version looks like "0.9.2.devX"
+:: if none are set: version looks like "0.9.2.devX+Y" or "0.9.2.dev0+selfbuilt"
 :: where X is the build number, Y is the git hash
 :: This is required to get '%SP_DIR~\jaxlib-{{ version }}.dist-info' directory name correctly
 set JAXLIB_RELEASE=1
 
 :: Set wheel version string (seems to be required alongside JAXLIB_RELEASE env variable)
-:: * `0.7.2.dev0+selfbuilt` (local build, default build rule behavior): `--repo_env=ML_WHEEL_TYPE=snapshot`
-:: * `0.7.2` (release): `--repo_env=ML_WHEEL_TYPE=release`
-:: * `0.7.2rc1` (release candidate): `--repo_env=ML_WHEEL_TYPE=release --repo_env=ML_WHEEL_VERSION_SUFFIX=rc1`
-:: * `0.7.2.dev20250128+3e75e20c7` (nightly build): `--repo_env=ML_WHEEL_TYPE=custom --repo_env=ML_WHEEL_BUILD_DATE=20250128 --repo_env=ML_WHEEL_GIT_HASH=$(git rev-parse HEAD)`
+:: * `0.9.2.dev0+selfbuilt` (local build, default build rule behavior): `--repo_env=ML_WHEEL_TYPE=snapshot`
+:: * `0.9.2` (release): `--repo_env=ML_WHEEL_TYPE=release`
+:: * `0.9.2rc1` (release candidate): `--repo_env=ML_WHEEL_TYPE=release --repo_env=ML_WHEEL_VERSION_SUFFIX=rc1`
+:: * `0.9.2.dev20260501+3e75e20c7` (nightly build): `--repo_env=ML_WHEEL_TYPE=custom --repo_env=ML_WHEEL_BUILD_DATE=20260501 --repo_env=ML_WHEEL_GIT_HASH=$(git rev-parse HEAD)`
 :: Ref: https://github.com/jax-ml/jax/commit/d424f5b5b38b75b6577d2c30532abbb693353742
 set ML_WHEEL_TYPE=release
 
@@ -31,13 +48,19 @@ set CLANG_COMPILER_PATH=%BUILD_PREFIX:\=/%/Library/bin/clang.exe
 echo build --logging=6 >> .bazelrc.user
 echo build --verbose_failures >> .bazelrc.user
 echo build --toolchain_resolution_debug >> .bazelrc.user
+echo build --define=BUILD_PREFIX=%BUILD_PREFIX:\=/% >> .bazelrc.user
 echo build --define=PREFIX=%PREFIX:\=/% >> .bazelrc.user
 echo build --define=PROTOBUF_INCLUDE_PATH=%PREFIX:\=/%/include >> .bazelrc.user
 echo build --local_resources=cpu=%CPU_COUNT% >> .bazelrc.user
 echo build --repo_env=GRPC_BAZEL_DIR=%PREFIX:\=/%/share/bazel/grpc/bazel >> .bazelrc.user
+:: jaxlib 0.9.x XLA's protobuf_impl.bzl requires PROTOBUF_BAZEL_DIR to locate
+:: the bazel rules from the protobuf-bazel-rules host package.
+echo build --repo_env=PROTOBUF_BAZEL_DIR=%PREFIX:\=/%/share/bazel/protobuf/bazel >> .bazelrc.user
 
-:: _m_prefetchw is declared in both Clang and Windows SDK
-:: This can be removed after Clang 21 is released
+:: _m_prefetchw is declared in both Clang and Windows SDK; defining
+:: __PRFCHWINTRIN_H suppresses Clang's intrinsic header so the SDK's
+:: declaration wins. Still needed under clang 22 - re-evaluate on the next
+:: clang bump.
 echo build --copt=-D__PRFCHWINTRIN_H >> .bazelrc.user
 
 :: Build and install jaxlib
@@ -63,7 +86,9 @@ echo build --copt=-D__PRFCHWINTRIN_H >> .bazelrc.user
     --use_clang=true ^
     --clang_path=%CLANG_COMPILER_PATH% ^
     --python_version=%PY_VER% ^
+    --bazel_startup_options=--output_user_root=C:/bzlroot ^
     --bazel_options=--config=win_clang ^
+    --bazel_options=--enable_runfiles ^
     --bazel_options="--experimental_ui_max_stdouterr_bytes=8000000"
 if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
 
@@ -74,6 +99,13 @@ if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
 :: Clean up Bazel artifacts
 bazel clean --expunge
 bazel shutdown
+
+:: Force-kill any lingering JVM processes so OpenJDK file handles in
+:: _build_env\Library\lib and conda's pkg cache are released. Without
+:: this, conda-build's post-build "rename work dir" step fails with
+:: WinError 5 on jvm.dll / modules. 2>nul so missing-process is ok.
+taskkill /F /IM java.exe 2>nul
+taskkill /F /IM javaw.exe 2>nul
 
 :: Install generated wheels
 %PYTHON% -m pip install --find-links=dist jaxlib -vv --no-build-isolation --no-deps
