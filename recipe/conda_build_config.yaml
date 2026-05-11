@@ -4,15 +4,24 @@ c_compiler:
 cxx_compiler:
   - clangxx  # [unix]
   - clang  # [win]
+# Linux: clang 22 is required for CUDA 13.x intrinsic headers (clang ≤21
+# rejects PTX 8.8+ in __clang_cuda_intrinsics.h). Aggregate CBC defaults
+# to gcc/14.3.0 on Linux, so we must override here.
+# osx: aggregate CBC defaults to clang 20; do NOT override to 22 because
+# clang 22 + bazel host-mode tools on macOS arm64 hit a dyld "missing
+# symbol called" failure during XLA TableGen execution (regression per
+# protocolbuffers/protobuf#12173, bazelbuild/bazel#27026).
 c_compiler_version:
-  - '20'
+  - '22'  # [linux]
 cxx_compiler_version:
-  - '20'
+  - '22'  # [linux]
 
 # Check JAX OS support for CUDA: https://docs.jax.dev/en/latest/installation.html#supported-platforms
-#  * As of v0.7.2, jaxlib supports CUDA 12.x on Linux x86_64 and aarch64
-#  * CUDA 12.x support may be removed in the future releases of jaxlib.
-#  * CUDA 13.0 support is added in jaxlib >=0.8.0: https://github.com/jax-ml/jax/discussions/31118#discussioncomment-14457667
+#  * jaxlib 0.9.x supports CUDA 12.x and 13.x on Linux x86_64 and aarch64
+#  * CUDA 13 support added in jaxlib >=0.8.0: https://github.com/jax-ml/jax/discussions/31118#discussioncomment-14457667
+#  * Variants per PKG-13074 (2026Q2 AI & Growth) and aggregate CBC: CUDA 12.9
+#    and 13.0 on linux-64 and linux-aarch64.
 cuda_compiler_version:
   - None
-  - 12.8  # [linux]
+  - 12.9  # [linux]
+  - 13.0  # [linux]
