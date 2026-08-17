@@ -1,0 +1,84 @@
+From 4ce0295dd693d309876493cdd26d70c42e57ab09 Mon Sep 17 00:00:00 2001
+From: "Uwe L. Korn" <uwe.korn@quantco.com>
+Date: Wed, 1 Jul 2026 19:08:02 +0000
+Subject: [PATCH] Fix LLVM indexed_accessor_iterator missing default
+ constructor under C++20
+
+---
+ ...dexed_accessor_iterator_default_ctor.patch | 51 +++++++++++++++++++
+ third_party/llvm/workspace.bzl                |  1 +
+ 2 files changed, 52 insertions(+)
+ create mode 100644 third_party/llvm/fix_indexed_accessor_iterator_default_ctor.patch
+
+diff --git a/third_party/llvm/fix_indexed_accessor_iterator_default_ctor.patch b/third_party/llvm/fix_indexed_accessor_iterator_default_ctor.patch
+new file mode 100644
+index 0000000000..9a48d858bf
+--- /dev/null
++++ b/third_party/llvm/fix_indexed_accessor_iterator_default_ctor.patch
+@@ -0,0 +1,51 @@
++# Copyright 2026 The LLVM Project Authors.
++#
++# Part of the LLVM Project, under the Apache License v2.0 with LLVM
++# Exceptions. See https://llvm.org/LICENSE.txt for license information.
++# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++#
++# indexed_accessor_iterator (and the nested iterator type of
++# indexed_accessor_range_base, used e.g. by mlir::SuccessorRange) has no
++# default constructor by design. When compiled as C++20 (this build forces
++# -std=c++20, see recipe/build.sh), libstdc++'s std::reverse_iterator
++# eagerly instantiates its own default constructor's exception specifier
++# (`noexcept(noexcept(_Iterator()))`) whenever `std::is_constructible_v` (or
++# a concept built on top of it, e.g. via GenericDomTreeConstruction.h's use
++# of reverse_iterator) is checked against these iterators. Since exception
++# specifications are instantiated outside of SFINAE context (CWG1330),
++# a *missing* default constructor turns into a hard error:
++#   error: no matching constructor for initialization of
++#   'llvm::detail::indexed_accessor_range_base<...>::iterator'
++#
++# Adding a defaulted default constructor fixes this: it is well-formed to
++# name (even a deleted) default constructor from an unevaluated operand, so
++# it's enough for `_Iterator()` to resolve to *some* declared constructor.
++# The added constructors are never meaningfully invoked at runtime.
++diff --git a/llvm/include/llvm/ADT/STLExtras.h b/llvm/include/llvm/ADT/STLExtras.h
++index 1111111..2222222 100644
++--- a/llvm/include/llvm/ADT/STLExtras.h
+++++ b/llvm/include/llvm/ADT/STLExtras.h
++@@ -1193,6 +1193,10 @@ public:
++   const BaseT &getBase() const { return base; }
++
++ protected:
+++  // Only present to satisfy std::default_initializable (needed transitively
+++  // by e.g. std::reverse_iterator under C++20); never meaningfully invoked.
+++  indexed_accessor_iterator() = default;
+++
++   indexed_accessor_iterator(BaseT base, ptrdiff_t index)
++       : base(base), index(index) {}
++   BaseT base;
++@@ -1220,7 +1224,12 @@ public:
++   class iterator : public indexed_accessor_iterator<iterator, BaseT, T,
++                                                     PointerT, ReferenceT> {
++   public:
+++    // Only present to satisfy std::default_initializable (needed
+++    // transitively by e.g. std::reverse_iterator under C++20); never
+++    // meaningfully invoked.
+++    iterator() = default;
+++
++     // Index into this iterator, invoking a static method on the derived type.
++     ReferenceT operator*() const {
++       return DerivedT::dereference_iterator(this->getBase(), this->getIndex());
++     }
+diff --git a/third_party/llvm/workspace.bzl b/third_party/llvm/workspace.bzl
+index 1344146573..6d4d45ebc6 100644
+--- a/third_party/llvm/workspace.bzl
++++ b/third_party/llvm/workspace.bzl
+@@ -24,6 +24,7 @@ def repo(name):
+             "//third_party/llvm:lit_test.patch",
+             "//third_party/llvm:run_lit.patch",
+             "//third_party/llvm:llvm_pr_203230.patch",
++            "//third_party/llvm:fix_indexed_accessor_iterator_default_ctor.patch",
+         ],
+         link_files = {"//third_party/llvm:run_lit.sh": "mlir/run_lit.sh"},
+     )
+-- 
+2.43.0
+

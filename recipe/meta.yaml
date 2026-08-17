@@ -20,7 +20,7 @@ source:
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
-    - patches/0005-Fix-oneDNN-ACL-spdlog-fmt-consteval-and-LLVM-indexed.patch  # [unix]
+    - patches/0005-Register-oneDNN-ACL-and-LLVM-fixes-in-XLA-patch-list.patch  # [unix]
     - patches/0006-Anaconda-fix-duplicate-FLAGS-symbols.patch  # [unix]
 
 build:

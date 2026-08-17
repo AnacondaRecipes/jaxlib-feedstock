@@ -9,6 +9,18 @@ touch -m -t 203510100101 $(find $BUILD_PREFIX/share/bazel/install -type f)
 
 $RECIPE_DIR/add_py_toolchain.sh
 
+# The oneDNN/LLVM fix patches are nested patches-of-patches (jax patches XLA's
+# fetch config, which itself patches oneDNN's/LLVM's fetch config). Materializing
+# them via conda-build's own patch mechanism would need a second "+"-wrapping
+# layer on top of their own internal nesting; conda-build's patch-level
+# autodetection parses raw "+++ "-prefixed lines to guess strip level, and for
+# the LLVM fix that extra wrap happens to produce comment lines that coincidentally
+# start with "+++ ", which breaks the heuristic (see 0005 patch for where these
+# get registered in third_party/xla/workspace.bzl). Placing them here via a plain
+# copy sidesteps that entirely.
+cp "$RECIPE_DIR/patches/xla-subpatches/0012-Fix-oneDNN-ACL-spdlog-fmt-consteval-error-with-Clang.patch" third_party/xla/
+cp "$RECIPE_DIR/patches/xla-subpatches/0013-Fix-LLVM-indexed_accessor_iterator-missing-default-c.patch" third_party/xla/
+
 if [[ "${target_platform}" == osx-* ]]; then
   export LDFLAGS="${LDFLAGS} -lz -framework CoreFoundation -Xlinker -undefined -Xlinker dynamic_lookup"
   # Remove stdlib=libc++; this is the default and errors on C sources.

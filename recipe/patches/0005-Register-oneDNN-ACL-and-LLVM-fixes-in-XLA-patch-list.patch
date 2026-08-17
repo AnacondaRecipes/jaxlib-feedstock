@@ -1,0 +1,9 @@
+diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
+--- a/third_party/xla/workspace.bzl
++++ b/third_party/xla/workspace.bzl
+@@ -37,3 +37,5 @@ def repo():
+             "//third_party/xla:0011-Fix-clang-CUDA-incompatabilities.patch",
++            "//third_party/xla:0012-Fix-oneDNN-ACL-spdlog-fmt-consteval-error-with-Clang.patch",
++            "//third_party/xla:0013-Fix-LLVM-indexed_accessor_iterator-missing-default-c.patch",
+         ],
+     )
