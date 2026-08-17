@@ -23,8 +23,7 @@ Co-Authored-By: H. Vetinari <h.vetinari@gmx.com>
  ...-coordination_agent_recoverable-flag.patch |  35 ++
  ...al-variant-_access-is-now-header-onl.patch |  29 ++
  ...d-dependency-on-proto_bazel_features.patch |  72 +++
- .../0009-Add-macos_x86_64-to-mkl_deps.patch   |  21 +
- .../xla/0010-Add-systemlib-for-oneDNN.patch   |  93 ++++
+ .../xla/0009-oneDNN-3.11-wait-compat.patch    |  39 ++++
  ...011-Fix-clang-CUDA-incompatabilities.patch |  64 +++
  third_party/xla/workspace.bzl                 |  11 +
  13 files changed, 1528 insertions(+)
@@ -36,9 +35,7 @@ Co-Authored-By: H. Vetinari <h.vetinari@gmx.com>
  create mode 100644 third_party/xla/0005-Unbundle-grpc.patch
  create mode 100644 third_party/xla/0006-Disable-coordination_agent_recoverable-flag.patch
  create mode 100644 third_party/xla/0007-absl_bad_-optional-variant-_access-is-now-header-onl.patch
- create mode 100644 third_party/xla/0008-Add-dependency-on-proto_bazel_features.patch
- create mode 100644 third_party/xla/0009-Add-macos_x86_64-to-mkl_deps.patch
- create mode 100644 third_party/xla/0010-Add-systemlib-for-oneDNN.patch
+ create mode 100644 third_party/xla/0009-oneDNN-3.11-wait-compat.patch
  create mode 100644 third_party/xla/0011-Fix-clang-CUDA-incompatabilities.patch
 
 diff --git a/third_party/grpc_systemlib.BUILD b/third_party/grpc_systemlib.BUILD
@@ -702,7 +699,7 @@ index 0000000..7ac6ad1
 +--- a/third_party/absl/workspace.bzl
 ++++ b/third_party/absl/workspace.bzl
 +@@ -11,9 +11,39 @@ def repo():
-+     ABSL_SHA256 = "87e91fb785a2d0233f4599317afd576b7736e6732d557bdcdfdc11990bd333ef"
++     ABSL_SHA256 = "6e1aee535473414164bf83e4ebc40240dec71a4701f8a642d906e95bea1aea0c"
 +     # LINT.ThenChange(//tensorflow/lite/tools/cmake/modules/abseil-cpp.cmake)
 + 
 ++    SYS_DIRS = [
@@ -810,7 +807,7 @@ new file mode 100644
 index 0000000..ce40617
 --- /dev/null
 +++ b/third_party/xla/0005-Unbundle-grpc.patch
-@@ -0,0 +1,469 @@
+@@ -0,0 +1,468 @@
 +From c4d16b07df92b609b4c7d1cef45669507a2552c1 Mon Sep 17 00:00:00 2001
 +From: "Uwe L. Korn" <uwe.korn@quantco.com>
 +Date: Wed, 23 Jul 2025 13:19:52 +0200
@@ -1044,9 +1041,8 @@ index 0000000..ce40617
 + 
 + def python_init_rules(extra_patches = []):
 +     """Defines (doesn't setup) the rules_python repository.
-+@@ -20,19 +21,9 @@ def python_init_rules(extra_patches = []):
-+         ],
-+     )
++@@ -11,18 +12,8 @@ def python_init_rules(extra_patches = []):
++     """
 + 
 +-    tf_http_archive(
 ++    protobuf_bazel_repo(
@@ -1174,7 +1170,7 @@ index 0000000..ce40617
 + """TensorFlow workspace initialization. Consult the WORKSPACE on how to use it."""
 + 
 +-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-+ load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
++ load("@rules_cc//cc:extensions.bzl", "compatibility_proxy_repo")
 + load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
 + load("//third_party:repo.bzl", "tf_http_archive", "tf_mirror_urls")
 +@@ -24,8 +23,6 @@ def workspace():
@@ -1259,10 +1255,10 @@ index 0000000..ce40617
 +-    tf_http_archive(
 ++    grpc_bazel_repo(
 +         name = "com_github_grpc_grpc",
-+-        sha256 = "e2ace790a5f2d0f83259d1390a816a33b013ea34df2e86084d927e58daa4c5d9",
-+-        strip_prefix = "grpc-1.78.0",
-+-        patch_file = ["//third_party/grpc:grpc.patch", "//third_party/grpc:layering_check.patch"],
-+-        urls = tf_mirror_urls("https://github.com/grpc/grpc/archive/refs/tags/v1.78.0.tar.gz"),
++-        sha256 = "41b695614b26652ff9e97ce50cfd4a6c7a3d45a9fe598d1454407746499bbf2c",
++-        strip_prefix = "grpc-1.81.0",
++-        patch_file = ["//third_party/grpc:grpc.patch"],
++-        urls = tf_mirror_urls("https://github.com/grpc/grpc/archive/refs/tags/v1.81.0.tar.gz"),
 ++        systemlib = "//third_party:grpc_systemlib.BUILD",
 +     )
 + 
@@ -1356,157 +1352,12 @@ index 0000000..726bacf
 +     deps = [
 +         "//absl/base:raw_logging_internal",
 +     ],
-diff --git a/third_party/xla/0008-Add-dependency-on-proto_bazel_features.patch b/third_party/xla/0008-Add-dependency-on-proto_bazel_features.patch
+diff --git a/third_party/xla/0009-oneDNN-3.11-wait-compat.patch b/third_party/xla/0009-oneDNN-3.11-wait-compat.patch
 new file mode 100644
-index 0000000..754265b
 --- /dev/null
-+++ b/third_party/xla/0008-Add-dependency-on-proto_bazel_features.patch
-@@ -0,0 +1,72 @@
-+From 6cc795438e6dce98d2f2a4955f146f5d922e022e Mon Sep 17 00:00:00 2001
-+From: "Uwe L. Korn" <uwe.korn@quantco.com>
-+Date: Fri, 12 Sep 2025 16:06:30 +0200
-+Subject: [PATCH 08/11] Add dependency on proto_bazel_features
-+
-+---
-+ workspace2.bzl |  4 +++-
-+ workspace3.bzl | 17 ++++++++++++++++-
-+ 2 files changed, 19 insertions(+), 2 deletions(-)
-+
-+diff --git a/workspace2.bzl b/workspace2.bzl
-+index 6b3fa83736..ccec782527 100644
-+--- a/workspace2.bzl
-++++ b/workspace2.bzl
-+@@ -1,6 +1,7 @@
-+ """TensorFlow workspace initialization. Consult the WORKSPACE on how to use it."""
-+ 
-+ load("@bazel_features//:deps.bzl", "bazel_features_deps")
-++load("@proto_bazel_features//:deps.bzl", proto_bazel_features_deps = "bazel_features_deps")
-+ load("@bazel_skylib//lib:versions.bzl", "versions")
-+ load("@bazel_tools//tools/build_defs/repo:java.bzl", "java_import_external")
-+ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-+@@ -667,7 +668,8 @@ def workspace():
-+     # written according to common practice to query native.existing_rule()).
-+     _tf_repositories()
-+ 
-+-    bazel_features_deps()
-++    # bazel_features_deps()
-++    proto_bazel_features_deps()
-+ 
-+ # Alias so it can be loaded without assigning to a different symbol to prevent
-+ # shadowing previous loads and trigger a buildifier warning.
-+diff --git a/workspace3.bzl b/workspace3.bzl
-+index a9aa1507a8..9598938b7b 100644
-+--- a/workspace3.bzl
-++++ b/workspace3.bzl
-+@@ -23,6 +23,14 @@ def workspace():
-+         ),
-+     )
-+ 
-++    tf_http_archive(
-++        name = "rules_java",
-++        urls = tf_mirror_urls(
-++            "https://github.com/bazelbuild/rules_java/releases/download/7.12.5/rules_java-7.12.5.tar.gz",
-++	),
-++        sha256 = "17b18cb4f92ab7b94aa343ce78531b73960b1bed2ba166e5b02c9fdf0b0ac270",
-++    )
-++
-+     tf_http_archive(
-+         name = "rules_license",
-+         urls = tf_mirror_urls(
-+@@ -40,12 +48,19 @@ def workspace():
-+     )
-+ 
-+     tf_http_archive(
-+-        name = "bazel_features",
-++        name = "proto_bazel_features",
-+         sha256 = "4fd9922d464686820ffd8fcefa28ccffa147f7cdc6b6ac0d8b07fde565c65d66",
-+         strip_prefix = "bazel_features-1.25.0",
-+         urls = tf_mirror_urls("https://github.com/bazel-contrib/bazel_features/releases/download/v1.25.0/bazel_features-v1.25.0.tar.gz"),
-+     )
-+ 
-++    tf_http_archive(
-++        name = "bazel_features",
-++        sha256 = "c41853e3b636c533b86bf5ab4658064e6cc9db0a3bce52cbff0629e094344ca9",
-++        strip_prefix = "bazel_features-1.33.0",
-++        urls = tf_mirror_urls("https://github.com/bazel-contrib/bazel_features/releases/download/v1.33.0/bazel_features-v1.33.0.tar.gz"),
-++    )
-++
-+     # Toolchains for ML projects hermetic builds.
-+     # Details: https://github.com/google-ml-infra/rules_ml_toolchain
-+     tf_http_archive(
-diff --git a/third_party/xla/0009-Add-macos_x86_64-to-mkl_deps.patch b/third_party/xla/0009-Add-macos_x86_64-to-mkl_deps.patch
-new file mode 100644
-index 0000000..7a9d48f
---- /dev/null
-+++ b/third_party/xla/0009-Add-macos_x86_64-to-mkl_deps.patch
-@@ -0,0 +1,21 @@
-+From cc3b77f2805b1bcfe7a5570b96afe44ca90037ec Mon Sep 17 00:00:00 2001
-+From: "Uwe L. Korn" <uwe.korn@quantco.com>
-+Date: Sat, 20 Sep 2025 08:15:14 +0200
-+Subject: [PATCH 09/11] Add macos_x86_64 to mkl_deps
-+
-+---
-+ xla/tsl/mkl/build_defs.bzl | 1 +
-+ 1 file changed, 1 insertion(+)
-+
-+diff --git a/xla/tsl/mkl/build_defs.bzl b/xla/tsl/mkl/build_defs.bzl
-+index 81f8015b39..fa62eaf299 100644
-+--- a/xla/tsl/mkl/build_defs.bzl
-++++ b/xla/tsl/mkl/build_defs.bzl
-+@@ -111,6 +111,7 @@ def mkl_deps():
-+         Label("//xla/tsl/mkl:build_with_mkl_aarch64"): ["@mkl_dnn_acl_compatible//:mkl_dnn_acl"],
-+         Label("//xla/tsl:linux_x86_64_with_onednn_async"): ["@onednn_async//:mkl_dnn"],
-+         Label("//xla/tsl:linux_x86_64"): ["@onednn//:mkl_dnn"],
-++        Label("//xla/tsl:macos_x86_64"): ["@onednn//:mkl_dnn"],
-+         Label("//xla/tsl:windows"): ["@onednn//:mkl_dnn"],
-+         "//conditions:default": [],
-+     })
-diff --git a/third_party/xla/0010-Add-systemlib-for-oneDNN.patch b/third_party/xla/0010-Add-systemlib-for-oneDNN.patch
-new file mode 100644
-index 0000000..4684321
---- /dev/null
-+++ b/third_party/xla/0010-Add-systemlib-for-oneDNN.patch
-@@ -0,0 +1,93 @@
-+From fe804b3bcb7cb84f2fd88725805038efc8413d31 Mon Sep 17 00:00:00 2001
-+From: "Uwe L. Korn" <uwe.korn@quantco.com>
-+Date: Fri, 26 Sep 2025 17:23:37 +0200
-+Subject: [PATCH 10/11] Add systemlib for oneDNN
-+
-+---
-+ third_party/mkl_dnn/mkldnn_system.BUILD             |  6 ++++++
-+ third_party/mkl_dnn/workspace.bzl                   |  1 +
-+ xla/backends/cpu/runtime/onednn/onednn_threadpool.h | 10 +++++++---
-+ xla/tsl/mkl/build_defs.bzl                          |  1 +
-+ xla/tsl/util/onednn_threadpool.h                    |  4 +++-
-+ 5 files changed, 18 insertions(+), 4 deletions(-)
-+ create mode 100644 third_party/mkl_dnn/mkldnn_system.BUILD
-+
-+diff --git a/third_party/mkl_dnn/mkldnn_system.BUILD b/third_party/mkl_dnn/mkldnn_system.BUILD
-+new file mode 100644
-+index 0000000000..21787db25a
-+--- /dev/null
-++++ b/third_party/mkl_dnn/mkldnn_system.BUILD
-+@@ -0,0 +1,6 @@
-++cc_library(
-++    name = "mkl_dnn",
-++    linkopts = ["-ldnnl"],
-++    visibility = ["//visibility:public"],
-++)
-++
-+diff --git a/third_party/mkl_dnn/workspace.bzl b/third_party/mkl_dnn/workspace.bzl
-+index 1c4b9b663f..14cde92583 100644
-+--- a/third_party/mkl_dnn/workspace.bzl
-++++ b/third_party/mkl_dnn/workspace.bzl
-+@@ -7,6 +7,7 @@ def repo():
-+         name = "onednn",
-+         build_file = "//third_party/mkl_dnn:mkldnn_v1.BUILD",
-+         patch_file = ["//third_party/mkl_dnn:setting_init.patch"],
-++        system_build_file = "//third_party/mkl_dnn:mkldnn_system.BUILD",
-+         sha256 = "071f289dc961b43a3b7c8cbe8a305290a7c5d308ec4b2f586397749abdc88296",
-+         strip_prefix = "oneDNN-3.7.3",
-+         urls = tf_mirror_urls("https://github.com/oneapi-src/oneDNN/archive/refs/tags/v3.7.3.tar.gz"),
++++ b/third_party/xla/0009-oneDNN-3.11-wait-compat.patch
+@@ -0,0 +1,39 @@
 +diff --git a/xla/backends/cpu/runtime/onednn/onednn_threadpool.h b/xla/backends/cpu/runtime/onednn/onednn_threadpool.h
-+index 99180b9a42..2bdd7e7b0d 100644
 +--- a/xla/backends/cpu/runtime/onednn/onednn_threadpool.h
 ++++ b/xla/backends/cpu/runtime/onednn/onednn_threadpool.h
 +@@ -23,6 +23,7 @@ limitations under the License.
@@ -1517,7 +1368,7 @@ index 0000000..4684321
 + #include "xla/backends/cpu/runtime/work_queue.h"
 + #include "xla/tsl/concurrency/async_value_ref.h"
 + #include "xla/tsl/concurrency/chain.h"
-+@@ -66,9 +67,12 @@ class OneDnnThreadPool final
++@@ -66,9 +67,10 @@ class OneDnnThreadPool final
 + 
 +   uint64_t get_flags() const final { return is_async_ ? ASYNCHRONOUS : 0; }
 + 
@@ -1527,26 +1378,11 @@ index 0000000..4684321
 ++#if defined(ENABLE_ONEDNN_ASYNC) || \
 ++    DNNL_VERSION_MAJOR > 3 || \
 ++    (DNNL_VERSION_MAJOR == 3 && DNNL_VERSION_MINOR >= 11)
-++  // oneDNN 3.11 made threadpool_iface::wait() mandatory for both sync and
-++  // async CPU runtime threadpools. Older releases only need it for the
-++  // experimental async runtime support, so keep it version-gated.
+++  // oneDNN 3.11 made threadpool_iface::wait() mandatory.
 +   void wait() override {
 +     if (is_async_) {
 +       // While performing asynchronous execution, wait() method is needed to
-+diff --git a/xla/tsl/mkl/build_defs.bzl b/xla/tsl/mkl/build_defs.bzl
-+index fa62eaf299..97f0649b62 100644
-+--- a/xla/tsl/mkl/build_defs.bzl
-++++ b/xla/tsl/mkl/build_defs.bzl
-+@@ -131,6 +131,7 @@ def mkl_dep():
-+         Label("//xla/tsl/mkl:build_with_mkl_aarch64"): "@mkl_dnn_acl_compatible//:mkl_dnn_acl",
-+         Label("//xla/tsl:linux_x86_64_with_onednn_async"): "@onednn_async//:mkl_dnn",
-+         Label("//xla/tsl:linux_x86_64"): "@onednn//:mkl_dnn",
-++        Label("//xla/tsl:macos_x86_64"): "@onednn//:mkl_dnn",
-+         Label("//xla/tsl:windows"): "@onednn//:mkl_dnn",
-+         "//conditions:default": "//xla/tsl/mkl:dummy_mkl_dnn",
-+     })
 +diff --git a/xla/tsl/util/onednn_threadpool.h b/xla/tsl/util/onednn_threadpool.h
-+index e7d698b935..80661caeb6 100644
 +--- a/xla/tsl/util/onednn_threadpool.h
 ++++ b/xla/tsl/util/onednn_threadpool.h
 +@@ -94,7 +94,9 @@ class OneDnnThreadPool : public threadpool_iface {
@@ -1621,10 +1457,10 @@ index 0000000..837513c
 +index 31f4815069..6e83184d1d 100644
 +--- a/xla/stream_executor/cuda/buffer_debug_float_check_kernel_cuda.cu.cc
 ++++ b/xla/stream_executor/cuda/buffer_debug_float_check_kernel_cuda.cu.cc
-+@@ -71,7 +71,7 @@ __host__ __device__ static constexpr T kInfinity =
++@@ -46,7 +46,7 @@ __device__ static constexpr T kInfinity =
 + // So we can get a constant this way.
 + template <>
-+ __host__ __device__ constexpr __nv_bfloat16 kInfinity<__nv_bfloat16> =
++ __device__ constexpr __nv_bfloat16 kInfinity<__nv_bfloat16> =
 +-    absl::bit_cast<__nv_bfloat16>(kInfinity<Eigen::bfloat16>);
 ++    __builtin_bit_cast(__nv_bfloat16, kInfinity<Eigen::bfloat16>);
 + // - __half lacks std::numeric_limits specialization, and Eigen::half is not a
@@ -1634,7 +1470,7 @@ diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
 index c96f49f..2dd4755 100644
 --- a/third_party/xla/workspace.bzl
 +++ b/third_party/xla/workspace.bzl
-@@ -25,6 +25,17 @@ def repo():
+@@ -25,6 +25,15 @@ def repo():
          patch_file = [
              # Add any patch files here.
              # "//third_party/xla:temporary.patch
@@ -1645,9 +1481,7 @@ index c96f49f..2dd4755 100644
 +            "//third_party/xla:0005-Unbundle-grpc.patch",
 +            "//third_party/xla:0006-Disable-coordination_agent_recoverable-flag.patch",
 +            "//third_party/xla:0007-absl_bad_-optional-variant-_access-is-now-header-onl.patch",
-+            "//third_party/xla:0008-Add-dependency-on-proto_bazel_features.patch",
-+            "//third_party/xla:0009-Add-macos_x86_64-to-mkl_deps.patch",
-+            "//third_party/xla:0010-Add-systemlib-for-oneDNN.patch",
++            "//third_party/xla:0009-oneDNN-3.11-wait-compat.patch",
 +            "//third_party/xla:0011-Fix-clang-CUDA-incompatabilities.patch",
          ],
      )
