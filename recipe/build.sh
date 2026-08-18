@@ -9,12 +9,12 @@ touch -m -t 203510100101 $(find $BUILD_PREFIX/share/bazel/install -type f)
 
 $RECIPE_DIR/add_py_toolchain.sh
 
-# Placed via plain copy, not conda-build's patch mechanism: these are
-# patches-of-patches, and conda-build's patch-level autodetection breaks on
-# the extra wrapping layer. Registered in third_party/xla/workspace.bzl by
-# patch 0005.
+# Placed via plain copy, not conda-build's patch mechanism (0012/0013 are
+# patches-of-patches that break conda-build's patch-level autodetection).
+# Registered in third_party/xla/workspace.bzl by patches 0005/0008.
 cp "$RECIPE_DIR/patches/xla-subpatches/0012-Fix-oneDNN-ACL-spdlog-fmt-consteval-error-with-Clang.patch" third_party/xla/
 cp "$RECIPE_DIR/patches/xla-subpatches/0013-Fix-LLVM-indexed_accessor_iterator-missing-default-c.patch" third_party/xla/
+cp "$RECIPE_DIR/patches/xla-subpatches/0016-Add-proto_bazel_features-for-system-protobuf.patch" third_party/xla/
 
 if [[ "${target_platform}" == osx-* ]]; then
   export LDFLAGS="${LDFLAGS} -lz -framework CoreFoundation -Xlinker -undefined -Xlinker dynamic_lookup"
