@@ -1,8 +1,0 @@
-diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
---- a/third_party/xla/workspace.bzl
-+++ b/third_party/xla/workspace.bzl
-@@ -39,3 +39,4 @@ def repo():
-             "//third_party/xla:0015-Disable-leave-barriers-flag.patch",
-+            "//third_party/xla:0016-Add-proto_bazel_features-for-system-protobuf.patch",
-         ],
-     )
