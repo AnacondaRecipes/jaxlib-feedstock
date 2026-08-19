@@ -46,7 +46,7 @@ new file mode 100644
 index 0000000..0e4e862
 --- /dev/null
 +++ b/third_party/grpc_systemlib.BUILD
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,77 @@
 +licenses(["notice"])  # Apache v2
 +
 +filegroup(
@@ -116,6 +116,12 @@ index 0000000..0e4e862
 +sh_binary(
 +    name = "grpc_python_plugin",
 +    srcs = ["grpc_python_plugin.bin"],
++    visibility = ["//visibility:public"],
++)
++
++cc_library(
++    name = "gpr",
++    linkopts = ["-lgpr"],
 +    visibility = ["//visibility:public"],
 +)
 diff --git a/third_party/xla/0001-Fix-abseil-headers.patch b/third_party/xla/0001-Fix-abseil-headers.patch
@@ -294,7 +300,7 @@ new file mode 100644
 index 0000000..bf3e2e8
 --- /dev/null
 +++ b/third_party/xla/0003-Re-enable-system-abseil.patch
-@@ -0,0 +1,422 @@
+@@ -0,0 +1,500 @@
 +From af6d869ce2b52c81a8cd11be234a1f367ac7a34d Mon Sep 17 00:00:00 2001
 +From: "Uwe L. Korn" <uwe.korn@quantco.com>
 +Date: Thu, 4 Jul 2024 15:58:32 +0200
@@ -378,6 +384,22 @@ index 0000000..bf3e2e8
 + cc_library(
 +     name = "hash_function_defaults",
 +     deps = [
++@@ -215,4 +215,15 @@ cc_library(
++         "//absl/types:compare",
++         "//absl/utility",
++     ],
++ )
+++
+++cc_library(
+++    name = "linked_hash_map",
+++    deps = [
+++        ":common",
+++        "//absl/base:config",
+++        "//absl/base:core_headers",
+++        "//absl/base:throw_delegate",
+++        "//absl/container:flat_hash_set",
+++    ],
+++)
 +diff --git a/third_party/absl/system.absl.crc.BUILD b/third_party/absl/system.absl.crc.BUILD
 +new file mode 100644
 +index 0000000000..487c36ff45
@@ -620,6 +642,44 @@ index 0000000..bf3e2e8
 +         "-labsl_random_internal_randen",
 +         "-labsl_random_internal_randen_hwaes",
 +         "-labsl_random_internal_randen_hwaes_impl",
++diff --git a/third_party/absl/system.absl.status.BUILD b/third_party/absl/system.absl.status.BUILD
++index 0000000000..1111111111 100644
++--- a/third_party/absl/system.absl.status.BUILD
+++++ b/third_party/absl/system.absl.status.BUILD
++@@ -28,4 +28,33 @@
++         "//absl/types:variant",
++         "//absl/utility",
++     ],
++ )
+++
+++cc_library(
+++    name = "status_builder",
+++    linkopts = ["-labsl_status_builder"],
+++    deps = [
+++        ":status",
+++        "//absl/base:config",
+++        "//absl/base:core_headers",
+++        "//absl/base:log_severity",
+++        "//absl/strings",
+++        "//absl/strings:cord",
+++        "//absl/strings:internal",
+++        "//absl/strings:stringify_stream",
+++        "//absl/time",
+++        "//absl/types:source_location",
+++    ],
+++)
+++
+++cc_library(
+++    name = "status_macros",
+++    deps = [
+++        ":status",
+++        ":status_builder",
+++        ":statusor",
+++        "//absl/base:config",
+++        "//absl/base:core_headers",
+++        "//absl/types:source_location",
+++    ],
+++)
 +diff --git a/third_party/absl/system.absl.strings.BUILD b/third_party/absl/system.absl.strings.BUILD
 +index fa9a7a84f6..9d8e9bfc05 100644
 +--- a/third_party/absl/system.absl.strings.BUILD
@@ -660,6 +720,30 @@ index 0000000..bf3e2e8
 +     deps = [
 +         ":str_format",
 +         "//absl/container:compressed_tuple",
++diff --git a/third_party/absl/system.absl.strings.BUILD b/third_party/absl/system.absl.strings.BUILD
++index 9d8e9bfc05..3333333333 100644
++--- a/third_party/absl/system.absl.strings.BUILD
+++++ b/third_party/absl/system.absl.strings.BUILD
++@@ -39,11 +39,19 @@
++ cc_library(
++     name = "str_format",
++     linkopts = ["-labsl_str_format_internal"],
++     deps = [
++         ":strings",
++         "//absl/functional:function_ref",
++         "//absl/numeric:representation",
++         "//absl/types:optional",
++         "//absl/types:span",
++     ],
++ )
+++
+++cc_library(
+++    name = "stringify_stream",
+++    deps = [
+++        ":string_view",
+++        "//absl/base:config",
+++    ],
+++)
 +diff --git a/third_party/absl/system.absl.utility.BUILD b/third_party/absl/system.absl.utility.BUILD
 +index e15049e261..013f44289e 100644
 +--- a/third_party/absl/system.absl.utility.BUILD
@@ -1003,9 +1087,9 @@ index 0000000..25e895c
 ++    deps = [dep + "_proto" for dep in proto[1][1]],
 ++) for proto in WELL_KNOWN_PROTO_MAP.items()]
 ++
-++[cc_proto_library(
+++[alias(
 ++    name = proto[0] + "_cc_proto",
-++    deps = [":" + proto[0] + "_proto"],
+++    actual = ":protobuf",
 ++    visibility = ["//visibility:public"],
 ++) for proto in WELL_KNOWN_PROTO_MAP.items()]
 +diff --git a/third_party/py/python_init_rules.bzl b/third_party/py/python_init_rules.bzl
@@ -1298,7 +1382,7 @@ new file mode 100644
 index 0000000..e5db4cd
 --- /dev/null
 +++ b/third_party/xla/0007-absl_bad_-optional-variant-_access-is-now-header-onl.patch
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,46 @@
 +From 34274ba04a288ba501596778e15187c32f454cc3 Mon Sep 17 00:00:00 2001
 +From: "Uwe L. Korn" <uwe.korn@quantco.com>
 +Date: Thu, 11 Sep 2025 21:33:07 +0200
@@ -1328,6 +1412,23 @@ index 0000000..e5db4cd
 +     deps = [
 +         "//absl/base:raw_logging_internal",
 +     ],
++@@ -54,6 +52,16 @@ cc_library(
++ cc_library(
++     name = "compare",
++     deps = [
++         "//absl/meta:type_traits",
++     ],
++ )
+++
+++cc_library(
+++    name = "source_location",
+++    linkopts = ["-labsl_source_location"],
+++    deps = [
+++        "//absl/base:config",
+++        "//absl/base:core_headers",
+++        "//absl/base:nullability",
+++    ],
+++)
 diff --git a/third_party/xla/0008-Add-dependency-on-proto_bazel_features.patch b/third_party/xla/0008-Add-dependency-on-proto_bazel_features.patch
 new file mode 100644
 index 0000000..fa6e539

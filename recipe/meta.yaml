@@ -20,6 +20,7 @@ source:
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
+    - patches/0005-Register-protoc_minimal-stub-in-XLA-patch-list.patch  # [unix]
 
 build:
   number: {{ build }}
@@ -41,7 +42,6 @@ requirements:
     - {{ compiler('cuda') }}          # [cuda_compiler_version != "None"]
     - rsync                           # [cuda_compiler_version != "None"]
     - unzip                           # [unix]
-    - bazel 7.*
     # pkgs/main maxes out at 0.4.1; conda-forge has >=0.5.8 but they're on
     # a different channel. 0.4.1 is what 0.7.2 shipped with.
     - bazel-toolchain >=0.4.1         # [unix]
@@ -83,7 +83,7 @@ requirements:
     - libabseil {{ libabseil }}       # [unix]
     - libprotobuf-static              # [unix]
     - flatbuffers                     # [unix]
-    - grpc-bazel-rules {{ libgrpc }}  # [unix]
+    - grpc-bazel-rules                # [unix]
     - libgrpc {{ libgrpc }}           # [unix]
     # jaxlib 0.9.x XLA's protobuf_impl.bzl reads protobuf bazel rules from
     # ${PREFIX}/share/bazel/protobuf/bazel via the PROTOBUF_BAZEL_DIR env var.

@@ -5,9 +5,36 @@ export JAX_RELEASE=1
 
 # Workaround a timestamp issue in rattler-build
 # https://github.com/prefix-dev/rattler-build/issues/1865
-touch -m -t 203510100101 $(find $BUILD_PREFIX/share/bazel/install -type f)
+if [ -d "$BUILD_PREFIX/share/bazel/install" ]; then
+  touch -m -t 203510100101 $(find $BUILD_PREFIX/share/bazel/install -type f)
+fi
+
+# protobuf-bazel-rules' bazel/flags/BUILD uses bool_flag/string_list_flag's
+# `scope` attribute, which XLA's vendored (older) bazel_skylib doesn't support.
+sed -i '/scope = "universal"/d' \
+  "$PREFIX/share/bazel/protobuf/bazel/flags/BUILD" \
+  "$PREFIX/share/bazel/protobuf/bazel/flags/cc/BUILD"
+
+# grpc-bazel-rules' generate_cc.bzl reads ProtoInfo.transitive_imports, a
+# field the bumped libprotobuf's ProtoInfo provider renamed to
+# transitive_sources.
+sed -i 's/\.transitive_imports\.to_list()/.transitive_sources.to_list()/' \
+  "$PREFIX/share/bazel/grpc/bazel/generate_cc.bzl"
+
+# protobuf-bazel-rules' flags.bzl falls back to a native ctx.fragments.proto
+# accessor Bazel restricts as a private API third-party .bzl files can't
+# call; skip the fallback and always use the (standard) Starlark default.
+sed -i \
+  -e 's/getattr(ctx\.fragments\.proto, "cc_proto_library_header_suffixes")/[".pb.h"]/' \
+  -e 's/getattr(ctx\.fragments\.proto, "cc_proto_library_source_suffixes")/[".pb.cc"]/' \
+  "$PREFIX/share/bazel/protobuf/bazel/flags/flags.bzl"
 
 $RECIPE_DIR/add_py_toolchain.sh
+
+# Placed via plain copy, not conda-build's patch mechanism (nested
+# patch-of-a-patch breaks conda-build's patch-level autodetection).
+# Registered in third_party/xla/workspace.bzl by patch 0005.
+cp "$RECIPE_DIR/patches/xla-subpatches/0012-Stub-protoc_minimal-for-native-proto_library.patch" third_party/xla/
 
 if [[ "${target_platform}" == osx-* ]]; then
   export LDFLAGS="${LDFLAGS} -lz -framework CoreFoundation -Xlinker -undefined -Xlinker dynamic_lookup"
@@ -193,6 +220,10 @@ echo "build --platforms=//bazel_toolchain:target_platform" >> .bazelrc
 echo "build --host_platform=//bazel_toolchain:build_platform" >> .bazelrc
 echo "build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain" >> .bazelrc
 echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazelrc
+# jax's own .bazelrc common:clang_local config (activated for non-hermetic
+# clang, our case) disables this; our own bazel_toolchain registers proper
+# toolchain()s for both target and exec platforms, so re-enable it here.
+echo "build --incompatible_enable_cc_toolchain_resolution" >> .bazelrc
 echo "build --logging=6" >> .bazelrc
 echo "build --verbose_failures" >> .bazelrc
 echo "build --toolchain_resolution_debug" >> .bazelrc
@@ -380,10 +411,14 @@ if [[ -n "${BAZEL_BUILD_RC:-}" ]]; then
   exit $BAZEL_BUILD_RC
 fi
 
-# Clean up to speedup postprocessing
-pushd build
-bazel clean --expunge
-popd
+# Clean up to speedup postprocessing. Use the local bazel binary that
+# build/build.py itself downloads (jax pins its own bazel, not conda's).
+BAZEL_BIN=$(find "$SRC_DIR" -maxdepth 1 -name "bazel-*" -type f | head -1)
+if [[ -n "$BAZEL_BIN" ]]; then
+  pushd build
+  "$BAZEL_BIN" clean --expunge
+  popd
+fi
 
 pushd $SP_DIR
 $PYTHON -m pip install $SRC_DIR/dist/jaxlib-*.whl --no-build-isolation --no-deps -vv
