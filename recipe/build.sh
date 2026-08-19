@@ -37,29 +37,6 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
         export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_75,sm_80,sm_86,sm_89,sm_90,sm_100,sm_120,compute_120
     fi
 
-    # CLANG22_WORKAROUND: rules_ml_toolchain PTX_VERSION_DICT clang 22 entry.
-    # Remove once XLA bumps its pinned rules_ml_toolchain to a commit that
-    # includes google-ml-infra/rules_ml_toolchain#236 (or a successor PR).
-    #
-    # jax 0.9.2's pinned XLA pulls rules_ml_toolchain commit cae0cbf, whose
-    # PTX_VERSION_DICT["clang"] only goes up to "21". Building with clang 22
-    # then fails at bazel analysis time:
-    #   "Cuda Configuration Error: The supported Clang versions are
-    #    [...,"21"]. Please add max PTX version supported by Clang major
-    #    version=22."
-    # Bumping rules_ml_toolchain wholesale to a commit that has clang 22
-    # would drag in ~2 months of unrelated changes; instead we materialize
-    # the pinned commit locally, inject the clang 22 entry, and pass the
-    # local copy via bazel's --override_repository (argv-only — bypasses
-    # conda-build's text-file prefix substitution).
-    RML_DIR="$SRC_DIR/_rules_ml_toolchain_local"
-    if [[ ! -d "$RML_DIR" ]]; then
-        mkdir -p "$RML_DIR"
-        curl -sL https://github.com/google-ml-infra/rules_ml_toolchain/archive/cae0cbffdc37d6570c974f6c53f447eba60af2b3.tar.gz \
-            | tar -xz -C "$RML_DIR" --strip-components=1
-        sed -i 's|"21": "8.8",|"21": "8.8",\n        "22": "9.0",|' \
-            "$RML_DIR/gpu/cuda/cuda_redist_versions.bzl"
-    fi
     if [[ "${target_platform}" == "linux-64" ]]; then
         export CUDA_ARCH="x86_64-linux"
     elif [[ "${target_platform}" == "linux-aarch64" ]]; then
@@ -347,12 +324,6 @@ for f in bazel_toolchain/cc_toolchain_config.bzl \
   fi
 done
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
-
-# Point bazel at our patched local rules_ml_toolchain (see comment near
-# RML_DIR above). Argv-only — do not put this in .bazelrc.
-if [[ -n "${RML_DIR:-}" && -d "${RML_DIR}" ]]; then
-    EXTRA="${EXTRA} --bazel_options=--override_repository=rules_ml_toolchain=${RML_DIR}"
-fi
 
 # CUDA13_WORKAROUND (continuation of the LOCAL_CCCL_PATH override block above).
 # Point bazel at our patched local CCCL copy for CUDA 13 builds.
