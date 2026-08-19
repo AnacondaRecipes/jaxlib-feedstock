@@ -21,6 +21,7 @@ source:
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
     - patches/0005-Register-protoc_minimal-stub-in-XLA-patch-list.patch  # [unix]
+    - patches/0006-Fix-missing-proto_library-load-in-jaxlib-gpu-BUILD.patch
 
 build:
   number: {{ build }}
@@ -56,6 +57,8 @@ requirements:
     # list libabseil here to ensure pinning correctly
     - libabseil                       # [unix]
     - sed                             # [unix]
+    # bazel's PywrapWinDefFile action needs bash; point BAZEL_SH at this in bld.bat
+    - msys2-bash                      # [win]
   host:
     {% if cuda_compiler_version != "None" %}
     - cuda-cudart-dev
