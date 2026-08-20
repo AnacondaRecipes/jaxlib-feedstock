@@ -22,6 +22,7 @@ source:
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
     - patches/0005-Register-protoc_minimal-stub-in-XLA-patch-list.patch  # [unix]
     - patches/0006-Fix-missing-proto_library-load-in-jaxlib-gpu-BUILD.patch
+    - patches/0007-Fix-missing-proto_library-load-in-jaxlib-mosaic-gpu.patch
 
 build:
   number: {{ build }}
@@ -59,6 +60,8 @@ requirements:
     - sed                             # [unix]
     # bazel's PywrapWinDefFile action needs bash; point BAZEL_SH at this in bld.bat
     - msys2-bash                      # [win]
+    # bazel genrules invoked through that bash need touch/cat/etc.
+    - msys2-coreutils                 # [win]
   host:
     {% if cuda_compiler_version != "None" %}
     - cuda-cudart-dev
