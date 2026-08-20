@@ -321,7 +321,9 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # we registered, but bazel often picks the autodetected one regardless.
 # Pass -isystem $PREFIX/include + $BUILD_PREFIX/include via --repo_env so
 # the autodetected toolchain finds protobuf/absl/grpc headers.
-EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++17"
+# gnu++17 (not plain c++17): cuda-nccl's nccl_device headers use the GNU
+# `typeof` keyword extension, which strict ISO C++17 mode rejects.
+EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=gnu++17"
 EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
 # protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
 # (and friends). Those headers ship with libprotobuf at $PREFIX/include/.

@@ -62,6 +62,7 @@ requirements:
     - msys2-bash                      # [win]
     # bazel genrules invoked through that bash need touch/cat/etc.
     - msys2-coreutils                 # [win]
+    - msys2-sed                       # [win]
   host:
     {% if cuda_compiler_version != "None" %}
     - cuda-cudart-dev
