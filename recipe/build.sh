@@ -231,6 +231,12 @@ echo "build --define=with_cross_compiler_support=true" >> .bazelrc
 echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
 echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
 echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc
+# jax's own .bazelrc (common:posix) sets --cxxopt/--host_cxxopt=-std=c++17;
+# cuda-nccl's nccl_device headers use the GNU `typeof` extension, which
+# strict ISO C++17 rejects. Appended here so it comes after config
+# expansion and wins as the last -std flag on the compile command line.
+echo "build --cxxopt=-std=gnu++17" >> .bazelrc
+echo "build --host_cxxopt=-std=gnu++17" >> .bazelrc
 
 # IMPORTANT: defines and repo_envs that contain $PREFIX or $BUILD_PREFIX paths
 # go directly on the bazel command line (via build/build.py --bazel_options),
@@ -321,9 +327,7 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # we registered, but bazel often picks the autodetected one regardless.
 # Pass -isystem $PREFIX/include + $BUILD_PREFIX/include via --repo_env so
 # the autodetected toolchain finds protobuf/absl/grpc headers.
-# gnu++17 (not plain c++17): cuda-nccl's nccl_device headers use the GNU
-# `typeof` keyword extension, which strict ISO C++17 mode rejects.
-EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=gnu++17"
+EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++17"
 EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
 # protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
 # (and friends). Those headers ship with libprotobuf at $PREFIX/include/.
