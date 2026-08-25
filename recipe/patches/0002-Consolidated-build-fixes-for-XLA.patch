@@ -1650,7 +1650,7 @@ new file mode 100644
 index 0000000..4cc8949
 --- /dev/null
 +++ b/third_party/xla/0011-Fix-clang-CUDA-incompatabilities.patch
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,67 @@
 +From bda0abfe8d7995db742d36a82e3af698e15a17da Mon Sep 17 00:00:00 2001
 +From: "Uwe L. Korn" <uwe.korn@quantco.com>
 +Date: Mon, 23 Mar 2026 07:29:40 +0100
@@ -1660,8 +1660,8 @@ index 0000000..4cc8949
 + third_party/raft/workspace.bzl                                  | 2 ++
 + third_party/rmm/workspace.bzl                                   | 2 ++
 + xla/backends/gpu/runtime/select_k_exec_raft.cc                  | 2 ++
-+ .../cuda/buffer_debug_float_check_kernel_cuda.cu.cc             | 2 +-
-+ 4 files changed, 7 insertions(+), 1 deletion(-)
++ .../cuda/buffer_debug_float_check_kernel_cuda.cu.cc             | 4 ++--
++ 4 files changed, 8 insertions(+), 2 deletions(-)
 +
 +diff --git a/third_party/raft/workspace.bzl b/third_party/raft/workspace.bzl
 +index 8d48be809a..85c2be6859 100644
@@ -1712,7 +1712,12 @@ index 0000000..4cc8949
 +-    absl::bit_cast<__nv_bfloat16>(kInfinity<Eigen::bfloat16>);
 ++    __builtin_bit_cast(__nv_bfloat16, kInfinity<Eigen::bfloat16>);
 + // - __half lacks std::numeric_limits specialization, and Eigen::half is not a
-+   return threadIdx.z * blockDim.y * blockDim.x + threadIdx.y * blockDim.x +
++@@ -53,4 +53,4 @@ __device__ constexpr __half kInfinity<__half> =
++ template <>
++ __device__ constexpr __half kInfinity<__half> =
++-    absl::bit_cast<__half>(uint16_t{0x7C00});
+++    __builtin_bit_cast(__half, uint16_t{0x7C00});
++ 
 diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
 index 8c9d53c..eea3172 100644
 --- a/third_party/xla/workspace.bzl
