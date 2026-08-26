@@ -23,6 +23,7 @@ source:
     - patches/0005-Register-protoc_minimal-stub-in-XLA-patch-list.patch  # [unix]
     - patches/0006-Fix-missing-proto_library-load-in-jaxlib-gpu-BUILD.patch
     - patches/0007-Fix-missing-proto_library-load-in-jaxlib-mosaic-gpu.patch
+    - patches/0008-Register-0014-disable-leave-barriers-flag-in-XLA-pa.patch  # [unix]
 
 build:
   number: {{ build }}
@@ -48,9 +49,9 @@ requirements:
     # a different channel. 0.4.1 is what 0.7.2 shipped with.
     - bazel-toolchain >=0.4.1         # [unix]
     # need protoc
-    - libprotobuf                     # [unix]
+    - libprotobuf {{ libprotobuf }}   # [unix]
     # XLA system_lib BUILD links against $(BUILD_PREFIX)/lib/libprotobuf.a
-    - libprotobuf-static              # [unix]
+    - libprotobuf-static {{ libprotobuf }}  # [unix]
     # needs protoc-gen-grpc
     - libgrpc                         # [unix]
     # needs flatc
@@ -88,7 +89,7 @@ requirements:
     - python-build
     # list libabseil here to ensure pinning correctly
     - libabseil {{ libabseil }}       # [unix]
-    - libprotobuf-static              # [unix]
+    - libprotobuf-static {{ libprotobuf }}  # [unix]
     - flatbuffers                     # [unix]
     - grpc-bazel-rules                # [unix]
     - libgrpc {{ libgrpc }}           # [unix]

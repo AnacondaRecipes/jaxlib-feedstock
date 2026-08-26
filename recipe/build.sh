@@ -35,6 +35,7 @@ $RECIPE_DIR/add_py_toolchain.sh
 # patch-of-a-patch breaks conda-build's patch-level autodetection).
 # Registered in third_party/xla/workspace.bzl by patch 0005.
 cp "$RECIPE_DIR/patches/xla-subpatches/0012-Stub-protoc_minimal-for-native-proto_library.patch" third_party/xla/
+cp "$RECIPE_DIR/patches/xla-subpatches/0014-Disable-leave-barriers-flag.patch" third_party/xla/
 
 if [[ "${target_platform}" == osx-* ]]; then
   export LDFLAGS="${LDFLAGS} -lz -framework CoreFoundation -Xlinker -undefined -Xlinker dynamic_lookup"
