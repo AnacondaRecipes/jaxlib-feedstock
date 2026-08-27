@@ -1,8 +1,0 @@
-diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
---- a/third_party/xla/workspace.bzl
-+++ b/third_party/xla/workspace.bzl
-@@ -38,3 +38,4 @@
-             "//third_party/xla:0011-Fix-clang-CUDA-incompatabilities.patch",
-+            "//third_party/xla:0012-Stub-protoc_minimal-for-native-proto_library.patch",
-         ],
-     )

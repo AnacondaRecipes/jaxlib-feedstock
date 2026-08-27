@@ -1718,11 +1718,117 @@ index 0000000..4cc8949
 +-    absl::bit_cast<__half>(uint16_t{0x7C00});
 ++    __builtin_bit_cast(__half, uint16_t{0x7C00});
 + 
+diff --git a/third_party/xla/0012-Stub-protoc_minimal-for-native-proto_library.patch b/third_party/xla/0012-Stub-protoc_minimal-for-native-proto_library.patch
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/third_party/xla/0012-Stub-protoc_minimal-for-native-proto_library.patch
+@@ -0,0 +1,30 @@
++--- a/third_party/protobuf_impl.bzl
+++++ b/third_party/protobuf_impl.bzl
++@@ -7,7 +7,27 @@
++   syslib_label = ctx.attr.systemlib
++   syslib_path = ctx.path(syslib_label)
++   ctx.execute(["cp", syslib_path, "BUILD"])
++   ctx.report_progress("Copied systemlib.BUILD")
+++
+++  # Native proto_library (and protoc_authenticity's implicit
+++  # _proto_compiler attribute, which requires executable = True) both
+++  # depend on this target; our systemlib doesn't vendor protobuf's C++
+++  # compiler sources, so point it at the real installed protoc instead.
+++  ctx.execute(["mkdir", "-p", "src/google/protobuf/compiler"])
+++  ctx.file(
+++      "src/google/protobuf/compiler/BUILD",
+++      "genrule(name = \"protoc_minimal\", outs = [\"protoc_minimal.bin\"], cmd = \"ln -s $(BUILD_PREFIX)/bin/protoc $@\", executable = 1, visibility = [\"//visibility:public\"])\n",
+++  )
+++
+++  # bazel/private/oss/toolchains/prebuilt/BUILD.bazel (another native
+++  # proto_library implicit dependency) loads this for its prebuilt-toolchain
+++  # registrations, which we don't use; stub it empty so the package loads.
+++  ctx.execute(["mkdir", "-p", "toolchain"])
+++  ctx.file("toolchain/BUILD", "")
+++  ctx.file(
+++      "toolchain/platforms.bzl",
+++      "PROTOBUF_PLATFORMS = {}\n",
+++  )
++ 
++ protobuf_bazel_repo = repository_rule(
++     implementation = _protobuf_impl,
+diff --git a/third_party/xla/0014-Disable-leave-barriers-flag.patch b/third_party/xla/0014-Disable-leave-barriers-flag.patch
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/third_party/xla/0014-Disable-leave-barriers-flag.patch
+@@ -0,0 +1,64 @@
++From 8f8c5d36414a638ab2e1906975a5b609669a1cdb Mon Sep 17 00:00:00 2001
++From: Eric Lundby <Eric.Lundby@gmail.com>
++Date: Wed, 28 Jan 2026 14:53:54 -0700
++Subject: [PATCH 1/1] 14
++
++---
++ .../coordination/coordination_service.cc           | 14 +++++++-------
++ 1 file changed, 7 insertions(+), 7 deletions(-)
++
++diff --git a/xla/tsl/distributed_runtime/coordination/coordination_service.cc b/xla/tsl/distributed_runtime/coordination/coordination_service.cc
++index 8667719a50..ddf8d82056 100644
++--- a/xla/tsl/distributed_runtime/coordination/coordination_service.cc
+++++ b/xla/tsl/distributed_runtime/coordination/coordination_service.cc
++@@ -53,9 +53,9 @@ limitations under the License.
++ #include "xla/tsl/protobuf/coordination_service.pb.h"
++ #include "xla/tsl/util/device_name_utils.h"
++
++-ABSL_FLAG(bool, leave_barriers_on_recoverable_agent_restart, false,
++-          "If true, allow the recoverable agent to leave ongoing barriers on "
++-          "restart.");
+++// ABSL_FLAG(bool, leave_barriers_on_recoverable_agent_restart, false,
+++//           "If true, allow the recoverable agent to leave ongoing barriers on "
+++//           "restart.");
++
++ namespace tsl {
++ namespace {
++@@ -312,7 +312,7 @@ CoordinationService::GetCountOfOutOfSyncTasksPerBarrier() {
++ }
++
++ void CoordinationService::CheckBarrierStatusWithRecoverableTasks() {
++-  if (!absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++  if (!false) {
++     return;
++   }
++
++@@ -555,7 +555,7 @@ void CoordinationService::ConnectTask(const CoordinatedTask& task,
++   task_state->Connect();
++   if (task_state->IsRecoverable()) {
++     LeaveOngoingBarriers(task, "recoverable task silently connected again");
++-    if (absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++    if (false) {
++       unsynced_recoverable_jobs_.insert(task_name);
++     }
++   }
++@@ -619,7 +619,7 @@ void CoordinationService::RegisterTaskAsync(const CoordinatedTask& task,
++       // again. When the task passes a barrier with other tasks, it will be
++       // removed from the unsynced set.
++       if (task_cluster_state->IsRecoverable() &&
++-          absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++          false) {
++         if (barriers_.contains(kClusterRegisterBarrierId) &&
++             barriers_[kClusterRegisterBarrierId].passed) {
++           // We want to mark the task unsynced when it connects again. When the
++@@ -1723,7 +1723,7 @@ void CoordinationService::LeaveOngoingBarriers(const CoordinatedTask& task,
++     for (const auto& barrier_id : task_state->GetOngoingBarriers()) {
++       BarrierState* barrier = &barriers_[barrier_id];
++       // Unregister task from barrier.
++-      if (absl::GetFlag(FLAGS_leave_barriers_on_recoverable_agent_restart)) {
+++      if (false) {
++         if (barrier->tasks_at_barrier.contains(task)) {
++           // Remove task from barrier.
++           barrier->recoverable_tasks_restarted_during_barrier.insert(task);
++--
++2.50.1 (Apple Git-155)
 diff --git a/third_party/xla/workspace.bzl b/third_party/xla/workspace.bzl
 index 8c9d53c..eea3172 100644
 --- a/third_party/xla/workspace.bzl
 +++ b/third_party/xla/workspace.bzl
-@@ -22,6 +22,17 @@ def repo():
+@@ -22,6 +22,19 @@ def repo():
          urls = tf_mirror_urls("https://github.com/openxla/xla/archive/{commit}.tar.gz".format(commit = XLA_COMMIT)),
          patch_file = [
              # Add any patch files here.
@@ -1738,6 +1844,8 @@ index 8c9d53c..eea3172 100644
 +            "//third_party/xla:0009-Add-macos_x86_64-to-mkl_deps.patch",
 +            "//third_party/xla:0010-Add-systemlib-for-oneDNN.patch",
 +            "//third_party/xla:0011-Fix-clang-CUDA-incompatabilities.patch",
++            "//third_party/xla:0012-Stub-protoc_minimal-for-native-proto_library.patch",
++            "//third_party/xla:0014-Disable-leave-barriers-flag.patch",
          ],
      )
  

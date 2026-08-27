@@ -31,12 +31,6 @@ sed -i \
 
 $RECIPE_DIR/add_py_toolchain.sh
 
-# Placed via plain copy, not conda-build's patch mechanism (nested
-# patch-of-a-patch breaks conda-build's patch-level autodetection).
-# Registered in third_party/xla/workspace.bzl by patch 0005.
-cp "$RECIPE_DIR/patches/xla-subpatches/0012-Stub-protoc_minimal-for-native-proto_library.patch" third_party/xla/
-cp "$RECIPE_DIR/patches/xla-subpatches/0014-Disable-leave-barriers-flag.patch" third_party/xla/
-
 if [[ "${target_platform}" == osx-* ]]; then
   export LDFLAGS="${LDFLAGS} -lz -framework CoreFoundation -Xlinker -undefined -Xlinker dynamic_lookup"
   # Remove stdlib=libc++; this is the default and errors on C sources.
@@ -215,29 +209,29 @@ BAZEL_EOF
 # writes real paths but conda-build later rewrites them back to literal
 # $BUILD_PREFIX/$PREFIX placeholders, which bazel reads as literals (proven by
 # `bazel info` showing --define=BUILD_PREFIX=\$BUILD_PREFIX). Append per line.
-echo "" >> .bazelrc
-echo "build --crosstool_top=//bazel_toolchain:toolchain" >> .bazelrc
-echo "build --platforms=//bazel_toolchain:target_platform" >> .bazelrc
-echo "build --host_platform=//bazel_toolchain:build_platform" >> .bazelrc
-echo "build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain" >> .bazelrc
-echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazelrc
+echo "" >> .bazelrc.user
+echo "build --crosstool_top=//bazel_toolchain:toolchain" >> .bazelrc.user
+echo "build --platforms=//bazel_toolchain:target_platform" >> .bazelrc.user
+echo "build --host_platform=//bazel_toolchain:build_platform" >> .bazelrc.user
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain" >> .bazelrc.user
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazelrc.user
 # jax's own .bazelrc common:clang_local config (activated for non-hermetic
 # clang, our case) disables this; our own bazel_toolchain registers proper
 # toolchain()s for both target and exec platforms, so re-enable it here.
-echo "build --incompatible_enable_cc_toolchain_resolution" >> .bazelrc
-echo "build --logging=6" >> .bazelrc
-echo "build --verbose_failures" >> .bazelrc
-echo "build --toolchain_resolution_debug" >> .bazelrc
-echo "build --define=with_cross_compiler_support=true" >> .bazelrc
-echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
-echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
-echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc
+echo "build --incompatible_enable_cc_toolchain_resolution" >> .bazelrc.user
+echo "build --logging=6" >> .bazelrc.user
+echo "build --verbose_failures" >> .bazelrc.user
+echo "build --toolchain_resolution_debug" >> .bazelrc.user
+echo "build --define=with_cross_compiler_support=true" >> .bazelrc.user
+echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
+echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
+echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc.user
 # jax's own .bazelrc (common:posix) sets --cxxopt/--host_cxxopt=-std=c++17;
 # cuda-nccl's nccl_device headers use the GNU `typeof` extension, which
 # strict ISO C++17 rejects. Appended here so it comes after config
 # expansion and wins as the last -std flag on the compile command line.
-echo "build --cxxopt=-std=gnu++17" >> .bazelrc
-echo "build --host_cxxopt=-std=gnu++17" >> .bazelrc
+echo "build --cxxopt=-std=gnu++17" >> .bazelrc.user
+echo "build --host_cxxopt=-std=gnu++17" >> .bazelrc.user
 
 # IMPORTANT: defines and repo_envs that contain $PREFIX or $BUILD_PREFIX paths
 # go directly on the bazel command line (via build/build.py --bazel_options),
@@ -246,13 +240,13 @@ echo "build --host_cxxopt=-std=gnu++17" >> .bazelrc
 
 # Use a fixed number instead of CPU_COUNT on linux-aarch64
 if [[ "${target_platform}" == "linux-aarch64" ]]; then
-  echo "build --local_resources=cpu=8" >> .bazelrc
+  echo "build --local_resources=cpu=8" >> .bazelrc.user
 else
-  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc
+  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc.user
 fi
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
-  echo "build --cpu=${TARGET_CPU}" >> .bazelrc
+  echo "build --cpu=${TARGET_CPU}" >> .bazelrc.user
 fi
 
 # For debugging
