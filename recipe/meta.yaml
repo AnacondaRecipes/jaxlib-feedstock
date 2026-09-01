@@ -20,10 +20,8 @@ source:
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
-    - patches/0005-Register-protoc_minimal-stub-in-XLA-patch-list.patch  # [unix]
-    - patches/0006-Fix-missing-proto_library-load-in-jaxlib-gpu-BUILD.patch
-    - patches/0007-Fix-missing-proto_library-load-in-jaxlib-mosaic-gpu.patch
-    - patches/0008-Register-0014-disable-leave-barriers-flag-in-XLA-pa.patch  # [unix]
+    - patches/0005-Fix-missing-proto_library-load-in-jaxlib-gpu-BUILD.patch
+    - patches/0006-Fix-missing-proto_library-load-in-jaxlib-mosaic-gpu.patch
 
 build:
   number: {{ build }}
