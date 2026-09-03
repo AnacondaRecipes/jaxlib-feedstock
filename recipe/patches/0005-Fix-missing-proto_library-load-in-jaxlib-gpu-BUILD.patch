@@ -1,0 +1,12 @@
+diff --git a/jaxlib/gpu/BUILD b/jaxlib/gpu/BUILD
+--- a/jaxlib/gpu/BUILD
++++ b/jaxlib/gpu/BUILD
+@@ -15,7 +15,7 @@
+ # Shared CUDA/ROCM GPU kernels.
+ 
+ load("@rules_cc//cc:cc_library.bzl", "cc_library")
+-# Placeholder: load proto_library
++load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+ 
+ load(
+     "//jaxlib:jax.bzl",

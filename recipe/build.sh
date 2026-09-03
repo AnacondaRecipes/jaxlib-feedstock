@@ -5,7 +5,29 @@ export JAX_RELEASE=1
 
 # Workaround a timestamp issue in rattler-build
 # https://github.com/prefix-dev/rattler-build/issues/1865
-touch -m -t 203510100101 $(find $BUILD_PREFIX/share/bazel/install -type f)
+if [ -d "$BUILD_PREFIX/share/bazel/install" ]; then
+  touch -m -t 203510100101 $(find $BUILD_PREFIX/share/bazel/install -type f)
+fi
+
+# protobuf-bazel-rules' bazel/flags/BUILD uses bool_flag/string_list_flag's
+# `scope` attribute, which XLA's vendored (older) bazel_skylib doesn't support.
+sed -i '/scope = "universal"/d' \
+  "$PREFIX/share/bazel/protobuf/bazel/flags/BUILD" \
+  "$PREFIX/share/bazel/protobuf/bazel/flags/cc/BUILD"
+
+# grpc-bazel-rules' generate_cc.bzl reads ProtoInfo.transitive_imports, a
+# field the bumped libprotobuf's ProtoInfo provider renamed to
+# transitive_sources.
+sed -i 's/\.transitive_imports\.to_list()/.transitive_sources.to_list()/' \
+  "$PREFIX/share/bazel/grpc/bazel/generate_cc.bzl"
+
+# protobuf-bazel-rules' flags.bzl falls back to a native ctx.fragments.proto
+# accessor Bazel restricts as a private API third-party .bzl files can't
+# call; skip the fallback and always use the (standard) Starlark default.
+sed -i \
+  -e 's/getattr(ctx\.fragments\.proto, "cc_proto_library_header_suffixes")/[".pb.h"]/' \
+  -e 's/getattr(ctx\.fragments\.proto, "cc_proto_library_source_suffixes")/[".pb.cc"]/' \
+  "$PREFIX/share/bazel/protobuf/bazel/flags/flags.bzl"
 
 $RECIPE_DIR/add_py_toolchain.sh
 
@@ -37,29 +59,6 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
         export HERMETIC_CUDA_COMPUTE_CAPABILITIES=sm_75,sm_80,sm_86,sm_89,sm_90,sm_100,sm_120,compute_120
     fi
 
-    # CLANG22_WORKAROUND: rules_ml_toolchain PTX_VERSION_DICT clang 22 entry.
-    # Remove once XLA bumps its pinned rules_ml_toolchain to a commit that
-    # includes google-ml-infra/rules_ml_toolchain#236 (or a successor PR).
-    #
-    # jax 0.9.2's pinned XLA pulls rules_ml_toolchain commit cae0cbf, whose
-    # PTX_VERSION_DICT["clang"] only goes up to "21". Building with clang 22
-    # then fails at bazel analysis time:
-    #   "Cuda Configuration Error: The supported Clang versions are
-    #    [...,"21"]. Please add max PTX version supported by Clang major
-    #    version=22."
-    # Bumping rules_ml_toolchain wholesale to a commit that has clang 22
-    # would drag in ~2 months of unrelated changes; instead we materialize
-    # the pinned commit locally, inject the clang 22 entry, and pass the
-    # local copy via bazel's --override_repository (argv-only — bypasses
-    # conda-build's text-file prefix substitution).
-    RML_DIR="$SRC_DIR/_rules_ml_toolchain_local"
-    if [[ ! -d "$RML_DIR" ]]; then
-        mkdir -p "$RML_DIR"
-        curl -sL https://github.com/google-ml-infra/rules_ml_toolchain/archive/cae0cbffdc37d6570c974f6c53f447eba60af2b3.tar.gz \
-            | tar -xz -C "$RML_DIR" --strip-components=1
-        sed -i 's|"21": "8.8",|"21": "8.8",\n        "22": "9.0",|' \
-            "$RML_DIR/gpu/cuda/cuda_redist_versions.bzl"
-    fi
     if [[ "${target_platform}" == "linux-64" ]]; then
         export CUDA_ARCH="x86_64-linux"
     elif [[ "${target_platform}" == "linux-aarch64" ]]; then
@@ -210,19 +209,29 @@ BAZEL_EOF
 # writes real paths but conda-build later rewrites them back to literal
 # $BUILD_PREFIX/$PREFIX placeholders, which bazel reads as literals (proven by
 # `bazel info` showing --define=BUILD_PREFIX=\$BUILD_PREFIX). Append per line.
-echo "" >> .bazelrc
-echo "build --crosstool_top=//bazel_toolchain:toolchain" >> .bazelrc
-echo "build --platforms=//bazel_toolchain:target_platform" >> .bazelrc
-echo "build --host_platform=//bazel_toolchain:build_platform" >> .bazelrc
-echo "build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain" >> .bazelrc
-echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazelrc
-echo "build --logging=6" >> .bazelrc
-echo "build --verbose_failures" >> .bazelrc
-echo "build --toolchain_resolution_debug" >> .bazelrc
-echo "build --define=with_cross_compiler_support=true" >> .bazelrc
-echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
-echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc
-echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc
+echo "" >> .bazelrc.user
+echo "build --crosstool_top=//bazel_toolchain:toolchain" >> .bazelrc.user
+echo "build --platforms=//bazel_toolchain:target_platform" >> .bazelrc.user
+echo "build --host_platform=//bazel_toolchain:build_platform" >> .bazelrc.user
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_toolchain" >> .bazelrc.user
+echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazelrc.user
+# jax's own .bazelrc common:clang_local config (activated for non-hermetic
+# clang, our case) disables this; our own bazel_toolchain registers proper
+# toolchain()s for both target and exec platforms, so re-enable it here.
+echo "build --incompatible_enable_cc_toolchain_resolution" >> .bazelrc.user
+echo "build --logging=6" >> .bazelrc.user
+echo "build --verbose_failures" >> .bazelrc.user
+echo "build --toolchain_resolution_debug" >> .bazelrc.user
+echo "build --define=with_cross_compiler_support=true" >> .bazelrc.user
+echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
+echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
+echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc.user
+# jax's own .bazelrc (common:posix) sets --cxxopt/--host_cxxopt=-std=c++17;
+# cuda-nccl's nccl_device headers use the GNU `typeof` extension, which
+# strict ISO C++17 rejects. Appended here so it comes after config
+# expansion and wins as the last -std flag on the compile command line.
+echo "build --cxxopt=-std=gnu++17" >> .bazelrc.user
+echo "build --host_cxxopt=-std=gnu++17" >> .bazelrc.user
 
 # IMPORTANT: defines and repo_envs that contain $PREFIX or $BUILD_PREFIX paths
 # go directly on the bazel command line (via build/build.py --bazel_options),
@@ -231,13 +240,13 @@ echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc
 
 # Use a fixed number instead of CPU_COUNT on linux-aarch64
 if [[ "${target_platform}" == "linux-aarch64" ]]; then
-  echo "build --local_resources=cpu=8" >> .bazelrc
+  echo "build --local_resources=cpu=8" >> .bazelrc.user
 else
-  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc
+  echo "build --local_resources=cpu=${CPU_COUNT}" >> .bazelrc.user
 fi
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
-  echo "build --cpu=${TARGET_CPU}" >> .bazelrc
+  echo "build --cpu=${TARGET_CPU}" >> .bazelrc.user
 fi
 
 # For debugging
@@ -348,12 +357,6 @@ for f in bazel_toolchain/cc_toolchain_config.bzl \
 done
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
 
-# Point bazel at our patched local rules_ml_toolchain (see comment near
-# RML_DIR above). Argv-only — do not put this in .bazelrc.
-if [[ -n "${RML_DIR:-}" && -d "${RML_DIR}" ]]; then
-    EXTRA="${EXTRA} --bazel_options=--override_repository=rules_ml_toolchain=${RML_DIR}"
-fi
-
 # CUDA13_WORKAROUND (continuation of the LOCAL_CCCL_PATH override block above).
 # Point bazel at our patched local CCCL copy for CUDA 13 builds.
 # rules_ml_toolchain's cuda_cccl repository rule honors LOCAL_CCCL_PATH;
@@ -409,10 +412,14 @@ if [[ -n "${BAZEL_BUILD_RC:-}" ]]; then
   exit $BAZEL_BUILD_RC
 fi
 
-# Clean up to speedup postprocessing
-pushd build
-bazel clean --expunge
-popd
+# Clean up to speedup postprocessing. Use the local bazel binary that
+# build/build.py itself downloads (jax pins its own bazel, not conda's).
+BAZEL_BIN=$(find "$SRC_DIR" -maxdepth 1 -name "bazel-*" -type f | head -1)
+if [[ -n "$BAZEL_BIN" ]]; then
+  pushd build
+  "$BAZEL_BIN" clean --expunge
+  popd
+fi
 
 pushd $SP_DIR
 $PYTHON -m pip install $SRC_DIR/dist/jaxlib-*.whl --no-build-isolation --no-deps -vv

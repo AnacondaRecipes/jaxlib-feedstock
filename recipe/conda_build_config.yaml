@@ -25,3 +25,10 @@ cuda_compiler_version:
   - None
   - 12.9  # [linux]
   - 13.0  # [linux]
+
+libabseil:
+  - '20260526.0'
+libgrpc:
+  - 1.82.1
+libprotobuf:
+  - '7.35.1'

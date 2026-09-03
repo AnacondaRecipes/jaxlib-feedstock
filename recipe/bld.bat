@@ -44,6 +44,12 @@ set BAZEL_VC="%VSINSTALLDIR%/VC"
 set BAZEL_LLVM=%BUILD_PREFIX:\=/%/Library/
 set CLANG_COMPILER_PATH=%BUILD_PREFIX:\=/%/Library/bin/clang.exe
 
+:: Bazel's PywrapWinDefFile action shells out to bash and otherwise only
+:: looks in a hardcoded set of conventional install locations (e.g.
+:: C:\tools\msys64\usr\bin\bash.exe), none of which match our conda-provided
+:: msys2-bash package.
+set BAZEL_SH=%BUILD_PREFIX:\=/%/Library/usr/bin/bash.exe
+
 :: Converted from build.sh
 echo build --logging=6 >> .bazelrc.user
 echo build --verbose_failures >> .bazelrc.user

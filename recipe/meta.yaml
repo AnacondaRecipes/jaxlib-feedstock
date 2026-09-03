@@ -1,6 +1,6 @@
 {% set name = 'jaxlib' %}
-{% set version = "0.9.2" %}
-{% set build = 1 %}
+{% set version = "0.11.0" %}
+{% set build = 0 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -13,18 +13,20 @@ package:
 source:
   # Only pull sources after upstream PyPI release
   url: https://github.com/jax-ml/jax/archive/jax-v{{ version }}.tar.gz
-  sha256: 9e67faaa74be4539e397fe61317568545f9ea325ddf1f7f534929d508786f29e
+  sha256: 007ef373573ff2fb8a5485679b791581fda328754fd7ae491de3bcdb0fc70d07
   patches:
     - patches/0001-Allow-for-custom-CUDA-build.patch
     # XLA unvendoring patches for Linux and macOS
     - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
     - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
+    - patches/0005-Fix-missing-proto_library-load-in-jaxlib-gpu-BUILD.patch
+    - patches/0006-Fix-missing-proto_library-load-in-jaxlib-mosaic-gpu.patch
 
 build:
   number: {{ build }}
   # https://github.com/jax-ml/jax?tab=readme-ov-file#supported-platforms
-  skip: true  # [py<311]
+  skip: true  # [py<312]
   skip: true  # [cuda_compiler_version != "None" and osx]
   string: cuda{{ cuda_compiler_version | replace('.', '') }}py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version != "None"]
   string: cpu_py{{ CONDA_PY }}h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [cuda_compiler_version == "None"]
@@ -41,14 +43,13 @@ requirements:
     - {{ compiler('cuda') }}          # [cuda_compiler_version != "None"]
     - rsync                           # [cuda_compiler_version != "None"]
     - unzip                           # [unix]
-    - bazel 7.*
     # pkgs/main maxes out at 0.4.1; conda-forge has >=0.5.8 but they're on
     # a different channel. 0.4.1 is what 0.7.2 shipped with.
     - bazel-toolchain >=0.4.1         # [unix]
     # need protoc
-    - libprotobuf                     # [unix]
+    - libprotobuf {{ libprotobuf }}   # [unix]
     # XLA system_lib BUILD links against $(BUILD_PREFIX)/lib/libprotobuf.a
-    - libprotobuf-static              # [unix]
+    - libprotobuf-static {{ libprotobuf }}  # [unix]
     # needs protoc-gen-grpc
     - libgrpc                         # [unix]
     # needs flatc
@@ -56,12 +57,18 @@ requirements:
     # list libabseil here to ensure pinning correctly
     - libabseil                       # [unix]
     - sed                             # [unix]
+    # bazel's PywrapWinDefFile action needs bash; point BAZEL_SH at this in bld.bat
+    - msys2-bash                      # [win]
+    # bazel genrules invoked through that bash need touch/cat/etc.
+    - msys2-coreutils                 # [win]
+    - msys2-sed                       # [win]
   host:
     {% if cuda_compiler_version != "None" %}
     - cuda-cudart-dev
     - cuda-cupti-dev
     - cuda-nvcc-tools
     - cuda-nvml-dev
+    - cuda-nvrtc-dev
     - cuda-nvtx-dev
     - cuda-version {{ cuda_compiler_version }}
     - cudnn
@@ -80,9 +87,9 @@ requirements:
     - python-build
     # list libabseil here to ensure pinning correctly
     - libabseil {{ libabseil }}       # [unix]
-    - libprotobuf-static              # [unix]
+    - libprotobuf-static {{ libprotobuf }}  # [unix]
     - flatbuffers                     # [unix]
-    - grpc-bazel-rules {{ libgrpc }}  # [unix]
+    - grpc-bazel-rules                # [unix]
     - libgrpc {{ libgrpc }}           # [unix]
     # jaxlib 0.9.x XLA's protobuf_impl.bzl reads protobuf bazel rules from
     # ${PREFIX}/share/bazel/protobuf/bazel via the PROTOBUF_BAZEL_DIR env var.
@@ -93,9 +100,9 @@ requirements:
     - zlib {{ zlib }}                 # [unix]
   run:
     # Per upstream jaxlib/setup.py install_requires:
-    # scipy>=1.13, numpy>=2.0, ml_dtypes>=0.5.0
+    # scipy>=1.14, numpy>=2.0, ml_dtypes>=0.5.0
     - python
-    - scipy >=1.13
+    - scipy >=1.14
     - numpy >=2.0
     - ml_dtypes >=0.5.0
     {% if cuda_compiler_version != "None" %}
