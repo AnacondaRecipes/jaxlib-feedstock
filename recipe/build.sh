@@ -132,77 +132,9 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
                --cudnn_version=$TF_CUDNN_VERSION \
                --build_cuda_with_clang"
 
-    # CUDA13_WORKAROUND: CCCL include-path strip + LOCAL_CCCL_PATH 3.0.1
-    # override. Remove once a future jaxlib release ships an XLA pin where
-    # rmm + bazel-fetched CCCL are source-compatible (likely once XLA picks
-    # up rmm >= 26.04 or a CCCL-3.2-aware rmm patch).
-    #
-    # CUDA 13 only: strip conda's CCCL include paths so bazel's hermetic CCCL
-    # (CCCL_3_2_0_DIST_DICT, fetched by rules_ml_toolchain) wins the lookup.
-    # cuda-cccl_linux-64 13.1.115 (NVIDIA's CUDA 13.1 redist CCCL) ships an
-    # older CCCL whose resource_ref.h templates don't match what rmm 26.02.00
-    # (XLA's pinned rmm) expects → "use of undeclared identifier
-    # 'device_async_resource_ref'". Conda CUDA activation prepends -I paths
-    # for the redist's cccl/ subdir, which beats bazel's -isystem in clang's
-    # search order. We only strip the cccl subdir; the parent
-    # targets/<arch>/include path stays so cuda_runtime.h etc. still resolve.
-    if [[ ${cuda_compiler_version} == 13* ]]; then
-        for var in CFLAGS CXXFLAGS CPPFLAGS; do
-            val="${!var:-}"
-            # Strip "-I<anything>/targets/<arch>/include/cccl" tokens (both
-            # PREFIX and BUILD_PREFIX variants). Use '#' as sed delimiter
-            # because '|' is alternation in ERE and confuses sed when used
-            # as the s-delimiter.
-            val=$(echo "$val" | sed -E 's#-I[^[:space:]]*/targets/[^/]+/include/cccl##g')
-            # Squeeze runs of spaces to one and trim leading/trailing.
-            val=$(echo "$val" | sed -E 's#^[[:space:]]+##; s#[[:space:]]+$##; s#[[:space:]]+# #g')
-            export "$var=$val"
-        done
-        if [[ -n "${CPATH:-}" ]]; then
-            CPATH=$(echo "$CPATH" | tr ':' '\n' | grep -Ev '/targets/[^/]+/include/cccl$' | paste -sd: -)
-            export CPATH
-        fi
-
-        # Override bazel's hermetic CCCL with v3.0.1. The default that XLA's
-        # rules_ml_toolchain pulls is CCCL 3.2.0, which has TWO independent
-        # incompatibilities with our jaxlib 0.9.2 build:
-        #   1. CCCL 3.2.0 string_view has `_CCCL_HOST` on 4 deduction guides;
-        #      clang 22 rejects with "deduction guides may only be annotated
-        #      with __host__ __device__". Fixed upstream by NVIDIA/cccl#7904
-        #      but not yet released in any v3.x.x.
-        #   2. CCCL 3.1.0 renamed `cuda::mr::async_resource_ref` →
-        #      `cuda::mr::resource_ref` and `async_resource_with` →
-        #      `resource_with`. rmm 26.02.00 (XLA's pinned rmm) still uses
-        #      the old names unconditionally, so it won't compile against
-        #      CCCL >= 3.1.0.
-        # CCCL 3.0.1 predates BOTH issues — it has the old API names rmm
-        # expects AND no _CCCL_HOST deduction guide on string_view.
-        # Override via LOCAL_CCCL_PATH (honored by rules_ml_toolchain's
-        # cuda_cccl repository rule when set).
-        LOCAL_CCCL_PATH="$SRC_DIR/_cccl_local"
-        if [[ ! -d "$LOCAL_CCCL_PATH/libcudacxx" ]]; then
-            mkdir -p "$LOCAL_CCCL_PATH"
-            curl -sL https://github.com/NVIDIA/cccl/releases/download/v3.0.1/cccl-src-v3.0.1.tar.gz \
-                | tar -xz -C "$LOCAL_CCCL_PATH" --strip-components=1
-        fi
-        export LOCAL_CCCL_PATH
-    fi
 fi
 
 source gen-bazel-toolchain
-
-# pkgs/main's bazel-toolchain 0.4.1 doesn't declare the conda_target_platform /
-# conda_build_platform constraints that conda-forge's >=0.5.8 emits.
-# Our patched XLA protobuf BUILD references @//bazel_toolchain:conda_target_platform
-# in a config_setting select(). Append the missing constraints so bazel can parse
-# them; since we don't cross-compile here (build_platform == target_platform),
-# the select() correctly falls through to the BUILD_PREFIX branch by default.
-cat >> bazel_toolchain/BUILD <<'BAZEL_EOF'
-
-constraint_setting(name = "conda_platform")
-constraint_value(name = "conda_target_platform", constraint_setting = ":conda_platform")
-constraint_value(name = "conda_build_platform", constraint_setting = ":conda_platform")
-BAZEL_EOF
 
 # Use line-by-line echo with unquoted vars so bash expands them at write time.
 # Heredoc + conda-build text-file prefix substitution interacts badly: heredoc
@@ -226,12 +158,12 @@ echo "build --define=with_cross_compiler_support=true" >> .bazelrc.user
 echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
 echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
 echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc.user
-# jax's own .bazelrc (common:posix) sets --cxxopt/--host_cxxopt=-std=c++17;
-# cuda-nccl's nccl_device headers use the GNU `typeof` extension, which
-# strict ISO C++17 rejects. Appended here so it comes after config
+# jax >=0.12's bzlmod dependency graph (protobuf, abseil, XLA) requires C++20;
+# cuda-nccl's nccl_device headers additionally use the GNU `typeof` extension,
+# which strict ISO C++ rejects. Appended here so it comes after config
 # expansion and wins as the last -std flag on the compile command line.
-echo "build --cxxopt=-std=gnu++17" >> .bazelrc.user
-echo "build --host_cxxopt=-std=gnu++17" >> .bazelrc.user
+echo "build --cxxopt=-std=gnu++20" >> .bazelrc.user
+echo "build --host_cxxopt=-std=gnu++20" >> .bazelrc.user
 
 # IMPORTANT: defines and repo_envs that contain $PREFIX or $BUILD_PREFIX paths
 # go directly on the bazel command line (via build/build.py --bazel_options),
@@ -322,7 +254,7 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # we registered, but bazel often picks the autodetected one regardless.
 # Pass -isystem $PREFIX/include + $BUILD_PREFIX/include via --repo_env so
 # the autodetected toolchain finds protobuf/absl/grpc headers.
-EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++17"
+EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++20"
 EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
 # protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
 # (and friends). Those headers ship with libprotobuf at $PREFIX/include/.
@@ -356,14 +288,6 @@ for f in bazel_toolchain/cc_toolchain_config.bzl \
   fi
 done
 EXTRA="${EXTRA} ${CUDA_ARGS:-}"
-
-# CUDA13_WORKAROUND (continuation of the LOCAL_CCCL_PATH override block above).
-# Point bazel at our patched local CCCL copy for CUDA 13 builds.
-# rules_ml_toolchain's cuda_cccl repository rule honors LOCAL_CCCL_PATH;
-# pass via --repo_env so the env value survives bazel's repo-rule isolation.
-if [[ -n "${LOCAL_CCCL_PATH:-}" && -d "${LOCAL_CCCL_PATH}/libcudacxx" ]]; then
-    EXTRA="${EXTRA} --bazel_options=--repo_env=LOCAL_CCCL_PATH=${LOCAL_CCCL_PATH}"
-fi
 
 if [[ "${target_platform}" == "osx-arm64" || "${target_platform}" != "${build_platform}" ]]; then
     EXTRA="${EXTRA} --target_cpu ${TARGET_CPU}"
