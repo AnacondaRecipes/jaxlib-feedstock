@@ -1,6 +1,6 @@
 {% set name = 'jaxlib' %}
-{% set version = "0.11.0" %}
-{% set build = 1 %}
+{% set version = "0.12.0.1" %}
+{% set build = 0 %}
 
 {% if cuda_compiler_version != "None" %}
 {% set build = build + 200 %}
@@ -13,15 +13,18 @@ package:
 source:
   # Only pull sources after upstream PyPI release
   url: https://github.com/jax-ml/jax/archive/jax-v{{ version }}.tar.gz
-  sha256: 007ef373573ff2fb8a5485679b791581fda328754fd7ae491de3bcdb0fc70d07
+  sha256: 2001f4d627882c8afc5bc3a0f413c471c8a295eb6621bf2572b71188877e73e9
   patches:
     - patches/0001-Allow-for-custom-CUDA-build.patch
-    # XLA unvendoring patches for Linux and macOS
-    - patches/0002-Consolidated-build-fixes-for-XLA.patch  # [unix]
-    - patches/0003-avoid-mirror-that-doesn-t-seem-to-have-current-xla-a.patch
+    # jax >=0.12 builds with bzlmod only (Bazel 9, no WORKSPACE), so the XLA
+    # system-lib/unvendoring fixes are now injected as XLA module patches
+    # through MODULE.bazel's single_version_override instead of
+    # third_party/xla/workspace.bzl.
+    - patches/0002-Adapt-XLA-build-fixes-to-Bzlmod.patch
+    - patches/0003-Fix-CUDA-header-mappings.patch
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
-    - patches/0005-Fix-missing-proto_library-load-in-jaxlib-gpu-BUILD.patch
-    - patches/0006-Fix-missing-proto_library-load-in-jaxlib-mosaic-gpu.patch
+    - patches/0005-Use-CCCL-3.4-for-Clang-CUDA.patch
+    - patches/0006-Include-CUDA-bfloat16-header.patch
 
 build:
   number: {{ build }}
@@ -43,9 +46,9 @@ requirements:
     - {{ compiler('cuda') }}          # [cuda_compiler_version != "None"]
     - rsync                           # [cuda_compiler_version != "None"]
     - unzip                           # [unix]
-    # pkgs/main maxes out at 0.4.1; conda-forge has >=0.5.8 but they're on
-    # a different channel. 0.4.1 is what 0.7.2 shipped with.
-    - bazel-toolchain >=0.4.1         # [unix]
+    # pkgs/main maxes out at 0.5.6; the bzlmod toolchain registration used by
+    # jax >=0.12 needs >=0.5.8 (currently conda-forge only).
+    - bazel-toolchain >=0.5.8         # [unix]
     # need protoc
     - libprotobuf {{ libprotobuf }}   # [unix]
     # XLA system_lib BUILD links against $(BUILD_PREFIX)/lib/libprotobuf.a
