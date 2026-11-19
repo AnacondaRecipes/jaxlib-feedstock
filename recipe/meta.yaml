@@ -25,6 +25,12 @@ source:
     - patches/0004-re-enable-use_fast_cpp_protos-true.patch
     - patches/0005-Use-CCCL-3.4-for-Clang-CUDA.patch
     - patches/0006-Include-CUDA-bfloat16-header.patch
+    # patches/0007-xla-conda-build-fixes.patch is intentionally NOT in this list:
+    # it targets the XLA module sources (xla/..., third_party/...) that Bazel
+    # fetches on its own, so conda-build's top-level source tree has none of its
+    # files. 0002 makes MODULE.bazel apply it via single_version_override, and
+    # build.sh / bld.bat copy it to third_party/xla/conda-build-fixes.patch
+    # before Bazel runs.
 
 build:
   number: {{ build }}

@@ -6,7 +6,7 @@ export JAX_RELEASE=1
 # The XLA build fixes are shipped as a file instead of being embedded in
 # 0002-Adapt-XLA-build-fixes-to-Bzlmod.patch: that patch creates this file, and
 # its contents (a nested diff) make conda-build's patch-level guesser pick -p0.
-cp "${RECIPE_DIR}/xla-conda-build-fixes.patch" third_party/xla/conda-build-fixes.patch
+cp "${RECIPE_DIR}/patches/0007-xla-conda-build-fixes.patch" third_party/xla/conda-build-fixes.patch
 
 # Workaround a timestamp issue in rattler-build
 # https://github.com/prefix-dev/rattler-build/issues/1865
