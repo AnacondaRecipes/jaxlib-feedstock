@@ -158,7 +158,7 @@ echo "build --extra_toolchains=//bazel_toolchain:cc_cf_host_toolchain" >> .bazel
 echo "build --incompatible_enable_cc_toolchain_resolution" >> .bazelrc.user
 echo "build --logging=6" >> .bazelrc.user
 echo "build --verbose_failures" >> .bazelrc.user
-echo "build --toolchain_resolution_debug" >> .bazelrc.user
+echo "build --toolchain_resolution_debug=.*" >> .bazelrc.user
 echo "build --define=with_cross_compiler_support=true" >> .bazelrc.user
 echo "build --per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
 echo "build --host_per_file_copt=external/xla/xla/backends/profiler/gpu/nvtx_utils.*@-include,string" >> .bazelrc.user
