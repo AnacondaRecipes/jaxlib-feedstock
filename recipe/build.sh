@@ -141,6 +141,17 @@ fi
 
 source gen-bazel-toolchain
 
+# gen-bazel-toolchain exports BAZEL_USE_CPP_ONLY_TOOLCHAIN, which makes Bazel
+# ignore every registered cc_toolchain; and jax's --enable_platform_specific_config
+# auto-applies the :macos config, whose crosstool flags point at the
+# WORKSPACE-era @local_config_apple_cc repo. Without both fixes, host-config
+# targets (e.g. grpc_cpp_toolchain's grpc_cpp_plugin_native) resolve to no
+# toolchain at all under Bazel 9.
+if [[ "${target_platform}" == osx-* ]]; then
+  unset BAZEL_USE_CPP_ONLY_TOOLCHAIN
+  sed -i '/local_config_apple/d' .bazelrc
+fi
+
 # Use line-by-line echo with unquoted vars so bash expands them at write time.
 # Heredoc + conda-build text-file prefix substitution interacts badly: heredoc
 # writes real paths but conda-build later rewrites them back to literal
@@ -169,6 +180,15 @@ echo "build:build_cuda_with_nvcc --action_env=CONDA_USE_NVCC=1" >> .bazelrc.user
 # expansion and wins as the last -std flag on the compile command line.
 echo "build --cxxopt=-std=gnu++20" >> .bazelrc.user
 echo "build --host_cxxopt=-std=gnu++20" >> .bazelrc.user
+
+if [[ "${target_platform}" == linux-* ]]; then
+  # The env's ld (binutils_impl 2.31.1) cannot parse the zstd-compressed
+  # .debug_info in libgcc-devel 15.x, and bazel actions only get
+  # PATH=/bin:/usr/bin so clang picks the system ld. Use lld from the clang
+  # toolchain instead.
+  echo "build --linkopt=-fuse-ld=lld" >> .bazelrc.user
+  echo "build --host_linkopt=-fuse-ld=lld" >> .bazelrc.user
+fi
 
 # IMPORTANT: defines and repo_envs that contain $PREFIX or $BUILD_PREFIX paths
 # go directly on the bazel command line (via build/build.py --bazel_options),

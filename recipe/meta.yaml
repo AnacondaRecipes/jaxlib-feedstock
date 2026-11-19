@@ -57,6 +57,9 @@ requirements:
     # patchelf tool_path, hence patchelf below.
     - bazel-toolchain >=0.5.6         # [unix]
     - patchelf                        # [unix]
+    # clang's lld: the env's ld (binutils 2.31.1) can't read the zstd-compressed
+    # .debug_info in libgcc-devel 15.x, so build.sh links with -fuse-ld=lld
+    - lld                             # [linux]
     # need protoc
     - libprotobuf {{ libprotobuf }}   # [unix]
     # XLA system_lib BUILD links against $(BUILD_PREFIX)/lib/libprotobuf.a
