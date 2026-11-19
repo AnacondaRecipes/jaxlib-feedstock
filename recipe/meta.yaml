@@ -46,9 +46,11 @@ requirements:
     - {{ compiler('cuda') }}          # [cuda_compiler_version != "None"]
     - rsync                           # [cuda_compiler_version != "None"]
     - unzip                           # [unix]
-    # pkgs/main maxes out at 0.5.6; the bzlmod toolchain registration used by
-    # jax >=0.12 needs >=0.5.8 (currently conda-forge only).
-    - bazel-toolchain >=0.5.8         # [unix]
+    # pkgs/main maxes out at 0.5.6; 0.5.7/0.5.8 only add platform markers that
+    # nothing here selects on, so 0.5.6 is sufficient. 0.5.6 still declares a
+    # patchelf tool_path, hence patchelf below.
+    - bazel-toolchain >=0.5.6         # [unix]
+    - patchelf                        # [unix]
     # need protoc
     - libprotobuf {{ libprotobuf }}   # [unix]
     # XLA system_lib BUILD links against $(BUILD_PREFIX)/lib/libprotobuf.a
