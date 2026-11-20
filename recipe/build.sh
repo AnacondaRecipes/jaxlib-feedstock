@@ -136,6 +136,11 @@ if [[ "${cuda_compiler_version:-None}" != "None" ]]; then
                --cuda_version=$TF_CUDA_VERSION \
                --cudnn_version=$TF_CUDNN_VERSION \
                --build_cuda_with_clang"
+    # bzlmod has no @local_config_cuda crosstool to inject this any more and
+    # jax 0.12's build.py has no --cuda_path flag, so clang ran without it and
+    # could not find CUDA/libdevice at all (sm_100/sm_120 errors).
+    CUDA_ARGS="${CUDA_ARGS} --bazel_options=--cxxopt=--cuda-path=${CUDA_HOME}"
+    CUDA_ARGS="${CUDA_ARGS} --bazel_options=--host_cxxopt=--cuda-path=${CUDA_HOME}"
 
 fi
 
@@ -149,7 +154,6 @@ source gen-bazel-toolchain
 # toolchain at all under Bazel 9.
 if [[ "${target_platform}" == osx-* ]]; then
   unset BAZEL_USE_CPP_ONLY_TOOLCHAIN
-  sed -i '/local_config_apple/d' .bazelrc
 fi
 
 # Use line-by-line echo with unquoted vars so bash expands them at write time.
@@ -279,8 +283,16 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # we registered, but bazel often picks the autodetected one regardless.
 # Pass -isystem $PREFIX/include + $BUILD_PREFIX/include via --repo_env so
 # the autodetected toolchain finds protobuf/absl/grpc headers.
-EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++20"
-EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
+if [[ "${target_platform}" == osx-* ]]; then
+  # Bazel 9 rejects an absolute -isystem to a path outside the execution root
+  # for [for tool] (exec-config) compiles, and $PREFIX/include is exactly that.
+  # Target compiles still get $PREFIX/include from CPPFLAGS and the toolchain.
+  EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${BUILD_PREFIX}/include:-std=c++20"
+  EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${BUILD_PREFIX}/include"
+else
+  EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++20"
+  EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
+fi
 # protoc-generated .pb.h files include "google/protobuf/runtime_version.h"
 # (and friends). Those headers ship with libprotobuf at $PREFIX/include/.
 # Bazel rejects user-supplied -I/-isystem to absolute paths outside the
