@@ -284,11 +284,15 @@ EXTRA="${EXTRA} --bazel_options=--repo_env=PROTOBUF_BAZEL_DIR=${PREFIX}/share/ba
 # Pass -isystem $PREFIX/include + $BUILD_PREFIX/include via --repo_env so
 # the autodetected toolchain finds protobuf/absl/grpc headers.
 if [[ "${target_platform}" == osx-* ]]; then
-  # Bazel 9 rejects an absolute -isystem to a path outside the execution root
-  # for [for tool] (exec-config) compiles, and $PREFIX/include is exactly that.
-  # Target compiles still get $PREFIX/include from CPPFLAGS and the toolchain.
-  EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${BUILD_PREFIX}/include:-std=c++20"
-  EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${BUILD_PREFIX}/include"
+  # Bazel 9 rejects ANY absolute -isystem outside the execution root for
+  # [for tool] (exec-config) compiles, so both $PREFIX/include and
+  # $BUILD_PREFIX/include are unusable here. Stage the conda headers inside
+  # the workspace and reference them workspace-relative instead.
+  mkdir -p conda_includes
+  cp -Rf "${BUILD_PREFIX}/include/." conda_includes/
+  cp -Rf "${PREFIX}/include/." conda_includes/
+  EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:conda_includes:-std=c++20"
+  EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:conda_includes"
 else
   EXTRA="${EXTRA} --bazel_options=--repo_env=BAZEL_CXXOPTS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include:-std=c++20"
   EXTRA="${EXTRA} --bazel_options=--repo_env=CC_FLAGS=-isystem:${PREFIX}/include:-isystem:${BUILD_PREFIX}/include"
