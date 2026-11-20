@@ -38,6 +38,9 @@ set JAXLIB_RELEASE=1
 :: Ref: https://github.com/jax-ml/jax/commit/d424f5b5b38b75b6577d2c30532abbb693353742
 set ML_WHEEL_TYPE=release
 
+:: XLA build fixes, applied inside the XLA module by Bazel (not by conda-build)
+copy /Y "%RECIPE_DIR%\patches\0007-xla-conda-build-fixes.patch" third_party\xla\conda-build-fixes.patch
+
 :: Necessary variables to make conda-build working
 set BAZEL_VS="%VSINSTALLDIR%"
 set BAZEL_VC="%VSINSTALLDIR%/VC"
@@ -53,7 +56,7 @@ set BAZEL_SH=%BUILD_PREFIX:\=/%/Library/usr/bin/bash.exe
 :: Converted from build.sh
 echo build --logging=6 >> .bazelrc.user
 echo build --verbose_failures >> .bazelrc.user
-echo build --toolchain_resolution_debug >> .bazelrc.user
+echo build --toolchain_resolution_debug=.* >> .bazelrc.user
 echo build --define=BUILD_PREFIX=%BUILD_PREFIX:\=/% >> .bazelrc.user
 echo build --define=PREFIX=%PREFIX:\=/% >> .bazelrc.user
 echo build --define=PROTOBUF_INCLUDE_PATH=%PREFIX:\=/%/include >> .bazelrc.user

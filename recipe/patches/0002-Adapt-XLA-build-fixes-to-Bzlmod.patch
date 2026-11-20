@@ -1,0 +1,31 @@
+From 543ec525638f0144d189a1829b06a28d66079939 Mon Sep 17 00:00:00 2001
+From: Silvio Traversaro <silvio.traversaro@gbionics.ai>
+Date: Mon, 19 Oct 2026 23:24:58 -0400
+Subject: [PATCH] Adapt XLA build fixes to JAX 0.12.0 Bzlmod
+
+Adapt the conda-forge XLA build fixes to JAX 0.12.0,
+with the Clang 21/22 RAFT compatibility fix.
+
+Preserve JAX's existing XLA archive patches and integrate
+the conda build fixes through the Bzlmod patch mechanism.
+
+XLA RAFT fix: https://github.com/openxla/xla/pull/51391
+
+Co-authored-by: Albert Yau <albert@mwyau.com>
+---
+ MODULE.bazel |   1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 6cef658..6ee7c73 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -38,7 +38,8 @@ archive_override(
+     patches = [
+         "//third_party:xla/xpu_triton_hook.patch",
+         "//third_party:xla/nvptx_compiler_target.patch",
+         "//third_party:xla/windows_cpp_gen_intrinsics.patch",
++        "//third_party:xla/conda-build-fixes.patch",
+     ],
+     strip_prefix = "xla-d867969800d4a8fd045505eabc65e1e66f30794f",
+     urls = ["https://github.com/openxla/xla/archive/d867969800d4a8fd045505eabc65e1e66f30794f.tar.gz"],
